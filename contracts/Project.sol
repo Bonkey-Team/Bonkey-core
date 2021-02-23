@@ -33,19 +33,19 @@ contract Project is IProject {
     //    
     //}
 
-    address                          _manager;
-    address                          _source_token;
-    address                          _target_token;
-    uint256                          _price;
-    uint256                          _min_rate_to_pass_proposal;
-    uint256                          _min_rate_to_withdraw;
-    uint256                          _commission_rate;
-    uint256                          _tot_source_contribution;
-    uint256                          _tot_target_contribution;
-    string                           _project_meta;
-    mapping (address => StakeHolder) _stake_holders;
-    uint256                          _num_proposals;
-    mapping (uint => Proposal)       _proposals;
+    address public                          _manager;
+    address public                          _source_token;
+    address public                          _target_token;
+    uint256 public                          _price;
+    uint256 public                          _min_rate_to_pass_proposal;
+    uint256 public                          _min_rate_to_withdraw;
+    uint256 public                          _commission_rate;
+    uint256 public                          _tot_source_contribution;
+    uint256 public                          _tot_target_contribution;
+    string  public                          _project_meta;
+    mapping (address => StakeHolder) public _stake_holders;
+    uint256 public                          _num_proposals;
+    mapping (uint => Proposal) public       _proposals;
 
 
     // core logics
@@ -56,6 +56,7 @@ contract Project is IProject {
                       uint256 min_rate_to_withdraw,
                       uint256 commission_rate,
                       string  calldata project_meta) external {
+        require(_manager == address(0x0));
         _manager                   = msg.sender;
         _source_token              = source_token;
         _target_token              = target_token;
@@ -64,7 +65,7 @@ contract Project is IProject {
         _min_rate_to_withdraw      = min_rate_to_withdraw;
         _commission_rate           = commission_rate;
         _project_meta              = project_meta;
-    } 
+    }
 
 
     function deposit(address token,
@@ -77,6 +78,7 @@ contract Project is IProject {
             _tot_source_contribution          = _tot_source_contribution.add(amount);
             
         } else {
+            require(amount.mul(_price).add(_tot_target_contribution) <= _tot_source_contribution);
             stake_holder._target_contribution = stake_holder._target_contribution.add(amount); 
             _tot_target_contribution          = _tot_target_contribution.add(amount);
         }
@@ -86,6 +88,7 @@ contract Project is IProject {
     function propose(string  calldata proposal_meta,
                      uint256 amount_target_token) external {
         require(msg.sender == _manager);
+        require(amount_target_token <= _tot_target_contribution);
         Proposal storage proposal = _proposals[_num_proposals];
         proposal._proposal_meta   = proposal_meta;
         proposal._proposed_amount = amount_target_token;
@@ -120,6 +123,7 @@ contract Project is IProject {
 
     function approve_proposal(uint256 index,
                               string  calldata approval_meta) external {
+        require(index < _num_proposals);
         Proposal storage proposal = _proposals[index];
         require(proposal._approved == false && proposal._rejected == false);
         require(proposal._proposal_approvals[msg.sender] == false);
