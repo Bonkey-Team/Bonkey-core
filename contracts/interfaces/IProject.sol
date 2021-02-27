@@ -13,22 +13,17 @@ interface IProject {
                      uint256 amount) external; 
     function propose(string  calldata proposal_meta,
                      uint256 amount_target_token) external; 
-    function approve_proposal(uint256 index,
+    function approve_proposal(uint256          index,
                               string  calldata approve_meta) external;
-    //function reject_proposal(uint index,
-    //                         string reject_meta) external;
-    //function withdraw(uint index,
-    //                  string withdraw_meta) external;
-    //function approve_withdraw(uint index,
-    //                          string approve_meta) external;
-    //function reject_withdraw(uint index,
-    //                         string reject_meta) external;
-    //// read / list logics
-    //function get_project_info() external view returns (uint, uint, uint, string);
-    //function get_stake_holders() external view returns (address[]);
-    //function get_stake_holder_info(address) external view returns (uint, uint);
-    //function get_num_proposals() external view returns (uint);
-    //function get_proposal_info(uint index) external view returns (string, string[], string[]);
-    //function get_num_withdraws() external view returns (uint);
-    //function get_withdraw_info(uint index, uint index) external view returns (string, string[], string[]);
+    function reject_proposal(uint            index,
+                             string calldata reject_meta) external;
+    function request_payment(uint            index,
+                             uint            idx,
+                             string calldata payment_meta) external;
+    function approve_payment(uint            index,
+                             uint            idx,
+                             string calldata approve_meta) external;
+    function reject_payment(uint            index,
+                            uint            idx,
+                            string calldata reject_meta) external;
 }
