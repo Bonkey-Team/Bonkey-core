@@ -72,7 +72,7 @@ contract Project is IProject {
                       uint256 min_rate_to_withdraw,
                       uint256 commission_rate,
                       string  calldata project_meta) external {
-        require(_manager == address(0x0));
+        require(_manager == address(0x0), "Project already initiated.");
         _manager                   = msg.sender;
         _source_token              = source_token;
         _target_token              = target_token;
