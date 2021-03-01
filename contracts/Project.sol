@@ -86,7 +86,7 @@ contract Project is IProject {
 
     function deposit(address token,
                      uint256 amount) external {
-        require(token == _source_token || token == _target_token);
+        require(token == _source_token || token == _target_token, "token unrecognized");
         IBEP20(token).transferFrom(msg.sender, address(this), amount);
         StakeHolder storage stake_holder = _stake_holders[msg.sender];
         if(token == _source_token) {
@@ -105,7 +105,7 @@ contract Project is IProject {
     // TODO check locked fund
     function propose(string  calldata proposal_meta,
                      uint256 amount_target_token) external {
-        require(msg.sender == _manager); // TODO anyone can propose
+        require(msg.sender == _manager, "only manager can propose"); // TODO anyone can propose
         require(amount_target_token <= _tot_target_contribution);
         Proposal storage proposal = _proposals[_num_proposals];
         proposal._proposal_meta   = proposal_meta;
@@ -143,7 +143,7 @@ contract Project is IProject {
 
 
     modifier can_vote_proposal(uint index) {
-        require(index < _num_proposals);
+        require(index < _num_proposals, "vote for an unexisted proposal");
         Proposal storage proposal = _proposals[index];
         require(proposal._approved == false && proposal._rejected == false);
         require(proposal._proposal_approvals[msg.sender] == false);
