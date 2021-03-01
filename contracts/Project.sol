@@ -94,7 +94,8 @@ contract Project is IProject {
             _tot_source_contribution          = _tot_source_contribution.add(amount);
             
         } else {
-            require(amount.mul(_price).add(_tot_target_contribution) <= _tot_source_contribution);
+            require(amount.mul(_price).add(_tot_target_contribution.mul(_price)) <= _tot_source_contribution,
+                    "can not invest more than source token value");
             stake_holder._target_contribution = stake_holder._target_contribution.add(amount); 
             _tot_target_contribution          = _tot_target_contribution.add(amount);
         }
@@ -104,12 +105,12 @@ contract Project is IProject {
     // TODO check locked fund
     function propose(string  calldata proposal_meta,
                      uint256 amount_target_token) external {
-        require(msg.sender == _manager);
+        require(msg.sender == _manager); // TODO anyone can propose
         require(amount_target_token <= _tot_target_contribution);
         Proposal storage proposal = _proposals[_num_proposals];
         proposal._proposal_meta   = proposal_meta;
         proposal._proposed_amount = amount_target_token;
-        _num_proposals.add(1);
+        _num_proposals = _num_proposals.add(1);
     }
 
 
