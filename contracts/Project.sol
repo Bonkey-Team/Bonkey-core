@@ -34,6 +34,7 @@ contract Project is IProject {
     }
 
     struct PaymentRequest {
+        address                      _contributor;
         string                       _payment_request_meta;
         bool                         _approved;
         bool                         _rejected;
@@ -58,6 +59,7 @@ contract Project is IProject {
     uint256 public                          _tot_source_contribution;
     uint256 public                          _tot_target_contribution;
     string  public                          _project_meta;
+    address[] public                        _holder_list;
     mapping (address => StakeHolder) public _stake_holders;
 
     uint256 public                          _num_proposals;
@@ -86,30 +88,37 @@ contract Project is IProject {
 
     function deposit(address token,
                      uint256 amount) external {
-        require(token == _source_token || token == _target_token);
+        require(_holder_list.length <= 10); // FIXME we limit the size of investors for now, to avoid attack
+        require(token == _source_token || token == _target_token, "token unrecognized");
         IBEP20(token).transferFrom(msg.sender, address(this), amount);
         StakeHolder storage stake_holder = _stake_holders[msg.sender];
+        if(stake_holder._source_contribution == 0 && stake_holder._target_contribution==0) {
+            _holder_list.push(msg.sender); // we allow the same holder to invest multiple times
+        }
         if(token == _source_token) {
             stake_holder._source_contribution = stake_holder._source_contribution.add(amount); 
             _tot_source_contribution          = _tot_source_contribution.add(amount);
             
         } else {
-            require(amount.mul(_price).add(_tot_target_contribution) <= _tot_source_contribution);
+            require(amount.mul(_price).add(_tot_target_contribution.mul(_price)) <= _tot_source_contribution,
+                    "can not invest more than source token value");
             stake_holder._target_contribution = stake_holder._target_contribution.add(amount); 
             _tot_target_contribution          = _tot_target_contribution.add(amount);
         }
     }
 
+    // TODO withdraw
+
 
     // TODO check locked fund
     function propose(string  calldata proposal_meta,
                      uint256 amount_target_token) external {
-        require(msg.sender == _manager);
+        require(msg.sender == _manager, "only manager can propose"); // TODO anyone can propose
         require(amount_target_token <= _tot_target_contribution);
         Proposal storage proposal = _proposals[_num_proposals];
         proposal._proposal_meta   = proposal_meta;
         proposal._proposed_amount = amount_target_token;
-        _num_proposals.add(1);
+        _num_proposals = _num_proposals.add(1);
     }
 
 
@@ -142,7 +151,7 @@ contract Project is IProject {
 
 
     modifier can_vote_proposal(uint index) {
-        require(index < _num_proposals);
+        require(index < _num_proposals, "vote for an unexisted proposal");
         Proposal storage proposal = _proposals[index];
         require(proposal._approved == false && proposal._rejected == false);
         require(proposal._proposal_approvals[msg.sender] == false);
@@ -166,6 +175,18 @@ contract Project is IProject {
     }
 
 
+    function is_proposal_rejected(uint index) private view returns(bool) {
+        // copmute total voting power
+        Proposal storage proposal   = _proposals[index];
+        uint256 total_voting_power  = _tot_source_contribution.add(_tot_target_contribution.mul(_price));
+        uint256 tot_rejected_vote_power = proposal._tot_rejected_vote_power;
+        if(tot_rejected_vote_power.mul(100).div(total_voting_power) > (100 - _min_rate_to_pass_proposal)) {
+            return true;
+        }
+        return false;
+    }
+
+
     function make_proposal_rejected(uint index) private {
         Proposal storage proposal = _proposals[index];
         proposal._rejected        = true;
@@ -182,7 +203,7 @@ contract Project is IProject {
         proposal._rejected_vote_power[msg.sender] = vote_power;
         proposal._tot_rejected_vote_power         = proposal._tot_rejected_vote_power.add(vote_power); 
 
-        if(is_proposal_approved(index) == true) {
+        if(is_proposal_rejected(index) == true) {
             make_proposal_rejected(index);
         }
     }
@@ -200,14 +221,44 @@ contract Project is IProject {
     }
 
 
-    function make_request_approved(uint index, uint idx) private {
+    function release_proposal(uint index, uint idx) private {
+        Proposal storage proposal = _proposals[index];
+        uint256 src_amnt = proposal._proposed_amount.mul(_price);
+        uint256 tgt_amnt = proposal._proposed_amount;
+        // release to contributor
+        uint256 src_contributor = tgt_amnt.mul(100-_commission_rate).div(100);
+        uint256 tgt_contributor = src_contributor.mul(_price); 
+        PaymentRequest storage request = proposal._payment_requests[idx];         
+        IBEP20(_source_token).transferFrom(address(this), request._contributor, src_contributor);
+        IBEP20(_target_token).transferFrom(address(this), request._contributor, tgt_contributor);
+        
+        for(uint i=0; i<_holder_list.length; i++) {
+            StakeHolder storage holder = _stake_holders[_holder_list[i]];
+            uint256 src_ratio = holder._source_contribution.mul(100).div(_tot_source_contribution);
+            uint256 tgt_ratio = holder._target_contribution.mul(100).div(_tot_target_contribution);
+            // release to entrepreneur role 
+            uint256 base = tgt_amnt.mul(_commission_rate);
+            uint256 tgt_entrepreneur = base.mul(tgt_ratio).div(10000); 
+            IBEP20(_target_token).transferFrom(address(this), _holder_list[i], tgt_entrepreneur);
+            uint256 sub_tgt_amnt = tgt_amnt.mul(tgt_ratio).div(100);
+            holder._target_contribution = holder._target_contribution.sub(sub_tgt_amnt);
+            // release to investor role
+            uint256 src_investor = base.mul(_price).mul(src_ratio).div(10000); 
+            IBEP20(_source_token).transferFrom(address(this), _holder_list[i], src_investor);
+            uint256 sub_src_amnt = src_amnt*src_ratio/100;
+            holder._source_contribution = holder._source_contribution.sub(sub_src_amnt);
+        }
+        // update
+        request._tot_vote_power_at_termination = _tot_source_contribution.add(_tot_target_contribution.mul(_price));
+        _tot_source_contribution = _tot_source_contribution.sub(src_amnt); 
+        _tot_target_contribution = _tot_target_contribution.sub(tgt_amnt); 
     }
 
 
     modifier can_request_payment(uint index) {
         require(index < _num_proposals);
         Proposal storage proposal = _proposals[index];
-        require(proposal._approved == true);
+        require(proposal._approved == true && proposal._released == false);
         _;
     }
 
@@ -217,6 +268,17 @@ contract Project is IProject {
                              string calldata payment_meta) external can_request_payment(index) {
         PaymentRequest storage request = _proposals[index]._payment_requests[idx];
         request._payment_request_meta = payment_meta;
+    }
+
+
+    modifier can_approve_request(uint index, uint idx) {
+        require(index < _num_proposals);
+        Proposal storage proposal = _proposals[index];
+        require(proposal._approved == true && proposal._released == false);
+        PaymentRequest storage request = proposal._payment_requests[idx];         
+        require(request._request_approvals[msg.sender] == false);
+        require(request._request_rejections[msg.sender] == false);
+        _;
     }
 
 
@@ -231,7 +293,7 @@ contract Project is IProject {
         request._tot_approved_vote_power         = request._tot_approved_vote_power.add(vote_power); 
 
         if(is_request_approved(index, idx) == true) {
-            make_request_approved(index, idx);
+            release_proposal(index, idx);
         }
     }
 
