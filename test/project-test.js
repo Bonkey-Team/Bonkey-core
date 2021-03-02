@@ -93,12 +93,12 @@ describe('Project', function () {
         assert.deepEqual(await this.project._num_proposals(), bigNumberify('1'));
         
         let prop = await this.project._proposals(0);
-        expect(await prop[0], 'first proposal')
+        expect(prop[0]).to.equal('first proposal')
         assert.deepEqual(prop[1], bigNumberify(wei_of_05_ether));
     });
 
 
-    it('can approve', async function () {
+    it('can approve proposal', async function () {
         const [owner, investor, contributor] = await ethers.getSigners();
 
         let wei_of_1000_ether = ethers.utils.parseEther("1000")
@@ -121,18 +121,54 @@ describe('Project', function () {
 
         let prop = await this.project._proposals(0);
         assert.deepEqual(prop[5], bigNumberify(wei_of_10_ether)); // vote power
-        expect(await prop[2], false)
-        expect(await prop[3], false)
-        expect(await prop[4], false)
+        expect(prop[2]).to.equal(false)
+        expect(prop[3]).to.equal(false)
+        expect(prop[4]).to.equal(false)
 
         await this.project.connect(investor).approve_proposal(0, "investor 's approval");
 
         prop = await this.project._proposals(0);
         assert.deepEqual(prop[5], bigNumberify(wei_of_20_ether));
-        expect(await prop[2], true)
-        expect(await prop[3], false)
-        expect(await prop[4], true)
+        expect(prop[2]).to.equal(true);
+        expect(prop[3]).to.equal(false);
+        expect(prop[4]).to.equal(false);
     });
 
+
+    it('can reject proposal', async function () {
+        const [owner, investor, contributor] = await ethers.getSigners();
+
+        let wei_of_1000_ether = ethers.utils.parseEther("1000")
+        let wei_of_10_ether = ethers.utils.parseEther("10")
+        let wei_of_1_ether = ethers.utils.parseEther("1")
+        let wei_of_05_ether = ethers.utils.parseEther("0.5")
+        let wei_of_20_ether = ethers.utils.parseEther("20")
+
+        await this.token1.connect(owner).transfer(investor.address, wei_of_1000_ether)
+        await this.token0.connect(owner).approve(this.project.address, wei_of_1000_ether)
+        await this.token1.connect(investor).approve(this.project.address, wei_of_1000_ether)
+
+        await this.project.connect(owner).initiate(this.token0.address,
+            this.token1.address, 10, 90, 90, 10, "first project");
+        await this.project.connect(owner).deposit(this.token0.address, wei_of_10_ether);
+        await this.project.connect(investor).deposit(this.token1.address, wei_of_1_ether);
+
+        await this.project.propose("first proposal", wei_of_05_ether);
+        await this.project.approve_proposal(0, "owner's approval");
+
+        let prop = await this.project._proposals(0);
+        assert.deepEqual(prop[5], bigNumberify(wei_of_10_ether)); // vote power
+        expect(prop[2]).to.equal(false);
+        expect(prop[3]).to.equal(false);
+        expect(prop[4]).to.equal(false);
+
+        await this.project.connect(investor).reject_proposal(0, "investor 's rejection");
+
+        prop = await this.project._proposals(0);
+        assert.deepEqual(prop[5], bigNumberify(wei_of_10_ether));
+        expect(prop[2]).to.equal(false);
+        expect(prop[3]).to.equal(true);
+        expect(prop[4]).to.equal(false);
+    });
 
 });
