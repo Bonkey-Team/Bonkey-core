@@ -225,12 +225,11 @@ contract Project is IProject {
         Proposal storage proposal = _proposals[index];
         uint256 src_amnt = proposal._proposed_amount.mul(_price);
         uint256 tgt_amnt = proposal._proposed_amount;
-        // release to contributor
-        uint256 src_contributor = tgt_amnt.mul(100-_commission_rate).div(100);
-        uint256 tgt_contributor = src_contributor.mul(_price); 
+        uint256 tgt_contributor = tgt_amnt.mul(100-_commission_rate).div(100);
+        uint256 src_contributor = tgt_contributor.mul(_price); 
         PaymentRequest storage request = proposal._payment_requests[idx];         
-        IBEP20(_source_token).transferFrom(address(this), request._contributor, src_contributor);
-        IBEP20(_target_token).transferFrom(address(this), request._contributor, tgt_contributor);
+        IBEP20(_source_token).transfer(request._contributor, src_contributor);
+        IBEP20(_target_token).transfer(request._contributor, tgt_contributor);
         
         for(uint i=0; i<_holder_list.length; i++) {
             StakeHolder storage holder = _stake_holders[_holder_list[i]];
@@ -239,12 +238,12 @@ contract Project is IProject {
             // release to entrepreneur role 
             uint256 base = tgt_amnt.mul(_commission_rate);
             uint256 tgt_entrepreneur = base.mul(tgt_ratio).div(10000); 
-            IBEP20(_target_token).transferFrom(address(this), _holder_list[i], tgt_entrepreneur);
+            IBEP20(_target_token).transfer(_holder_list[i], tgt_entrepreneur);
             uint256 sub_tgt_amnt = tgt_amnt.mul(tgt_ratio).div(100);
             holder._target_contribution = holder._target_contribution.sub(sub_tgt_amnt);
             // release to investor role
             uint256 src_investor = base.mul(_price).mul(src_ratio).div(10000); 
-            IBEP20(_source_token).transferFrom(address(this), _holder_list[i], src_investor);
+            IBEP20(_source_token).transfer(_holder_list[i], src_investor);
             uint256 sub_src_amnt = src_amnt*src_ratio/100;
             holder._source_contribution = holder._source_contribution.sub(sub_src_amnt);
         }
@@ -252,6 +251,7 @@ contract Project is IProject {
         request._tot_vote_power_at_termination = _tot_source_contribution.add(_tot_target_contribution.mul(_price));
         _tot_source_contribution = _tot_source_contribution.sub(src_amnt); 
         _tot_target_contribution = _tot_target_contribution.sub(tgt_amnt); 
+        proposal._released = true;
     }
 
 
@@ -268,6 +268,7 @@ contract Project is IProject {
                              string calldata payment_meta) external can_request_payment(index) {
         PaymentRequest storage request = _proposals[index]._payment_requests[idx];
         request._payment_request_meta = payment_meta;
+        request._contributor = msg.sender;
     }
 
 
