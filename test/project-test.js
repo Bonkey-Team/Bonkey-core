@@ -199,13 +199,60 @@ describe('Project', function () {
         await this.project.connect(owner).approve_payment(0, 0, "owner's approval");
         await this.project.connect(investor).approve_payment(0, 0, "investor 's approval");
 
-        assert.deepEqual(await this.token0.balanceOf(contributor.address), bigNumberify(wei_of_4_5_ether));
+        assert.deepEqual(await this.token0.balanceOf(contributor.address), bigNumberify(wei_of_05_ether));
         assert.deepEqual(await this.token1.balanceOf(contributor.address), bigNumberify(wei_of_045_ether));
+
+        assert.deepEqual(await this.token0.balanceOf(owner.address), bigNumberify(ethers.utils.parseEther("99999990")));
+        assert.deepEqual(await this.token1.balanceOf(owner.address), bigNumberify(ethers.utils.parseEther("99999000.05")));
+
+        assert.deepEqual(await this.token0.balanceOf(investor.address), bigNumberify(wei_of_4_5_ether));
+        assert.deepEqual(await this.token1.balanceOf(investor.address), bigNumberify(ethers.utils.parseEther("999")));
+
+        assert.deepEqual(await this.project._tot_source_contribution(), bigNumberify(ethers.utils.parseEther("5")));
+        assert.deepEqual(await this.project._tot_target_contribution(), bigNumberify(ethers.utils.parseEther("0.5")));
+
+        let own = await this.project._stake_holders(owner.address);
+        assert.deepEqual (own[0], bigNumberify(ethers.utils.parseEther("5")));
+        let inv = await this.project._stake_holders(investor.address);
+        assert.deepEqual (inv[1], bigNumberify(ethers.utils.parseEther("0.5")));
 
         prop = await this.project._proposals(0);
         expect(prop[2]).to.equal(true);
         expect(prop[3]).to.equal(false);
         expect(prop[4]).to.equal(true);
+    });
+
+
+    it('can reject payment request', async function () {
+        const [owner, investor, contributor] = await ethers.getSigners();
+
+        let wei_of_1000_ether = ethers.utils.parseEther("1000")
+        let wei_of_10_ether = ethers.utils.parseEther("10")
+        let wei_of_1_ether = ethers.utils.parseEther("1")
+        let wei_of_05_ether = ethers.utils.parseEther("0.5")
+        let wei_of_045_ether = ethers.utils.parseEther("0.45")
+        let wei_of_4_5_ether = ethers.utils.parseEther("4.5")
+
+        await this.token1.connect(owner).transfer(investor.address, wei_of_1000_ether)
+        await this.token0.connect(owner).approve(this.project.address, wei_of_1000_ether)
+        await this.token1.connect(investor).approve(this.project.address, wei_of_1000_ether)
+
+        await this.project.connect(owner).initiate(this.token0.address,
+            this.token1.address, 10, 90, 90, 10, "first project");
+        await this.project.connect(owner).deposit(this.token0.address, wei_of_10_ether);
+        await this.project.connect(investor).deposit(this.token1.address, wei_of_1_ether);
+
+        await this.project.propose("first proposal", wei_of_05_ether);
+        await this.project.approve_proposal(0, "owner's approval");
+        await this.project.connect(investor).approve_proposal(0, "investor 's approval");
+        await this.project.connect(contributor).request_payment(0, 0, "I have done the work");
+
+        await this.project.connect(owner).reject_payment(0, 0, "owner's rejection");
+
+        let req = await this.project.get_request_info(0, 0);
+        expect(req[2]).to.equal(false);
+        expect(req[3]).to.equal(true);
+
     });
 
 });

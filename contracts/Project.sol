@@ -221,12 +221,24 @@ contract Project is IProject {
     }
 
 
+    function is_request_rejected(uint index, uint idx) private view returns(bool) {
+        // copmute total voting power
+        PaymentRequest storage request = _proposals[index]._payment_requests[idx];
+        uint256 total_voting_power  = _tot_source_contribution.add(_tot_target_contribution.mul(_price));
+        uint256 tot_rejected_vote_power = request._tot_rejected_vote_power;
+        if(tot_rejected_vote_power.mul(100).div(total_voting_power) > (100 - _min_rate_to_pass_proposal)) {
+            return true;
+        }
+        return false;
+    }
+
+
     function release_proposal(uint index, uint idx) private {
         Proposal storage proposal = _proposals[index];
         uint256 src_amnt = proposal._proposed_amount.mul(_price);
         uint256 tgt_amnt = proposal._proposed_amount;
         uint256 tgt_contributor = tgt_amnt.mul(100-_commission_rate).div(100);
-        uint256 src_contributor = tgt_contributor.mul(_price); 
+        uint256 src_contributor = src_amnt.mul(_commission_rate).div(100); 
         PaymentRequest storage request = proposal._payment_requests[idx];         
         IBEP20(_source_token).transfer(request._contributor, src_contributor);
         IBEP20(_target_token).transfer(request._contributor, tgt_contributor);
@@ -236,22 +248,34 @@ contract Project is IProject {
             uint256 src_ratio = holder._source_contribution.mul(100).div(_tot_source_contribution);
             uint256 tgt_ratio = holder._target_contribution.mul(100).div(_tot_target_contribution);
             // release to entrepreneur role 
-            uint256 base = tgt_amnt.mul(_commission_rate);
-            uint256 tgt_entrepreneur = base.mul(tgt_ratio).div(10000); 
-            IBEP20(_target_token).transfer(_holder_list[i], tgt_entrepreneur);
-            uint256 sub_tgt_amnt = tgt_amnt.mul(tgt_ratio).div(100);
-            holder._target_contribution = holder._target_contribution.sub(sub_tgt_amnt);
+            if (src_ratio != 0) {
+                uint256 base = tgt_amnt.mul(_commission_rate);
+                uint256 tgt_entrepreneur = base.mul(src_ratio).div(10000); 
+                IBEP20(_target_token).transfer(_holder_list[i], tgt_entrepreneur);
+                uint256 sub_src_amnt = src_amnt*src_ratio/100;
+                holder._source_contribution = holder._source_contribution.sub(sub_src_amnt);
+            }
             // release to investor role
-            uint256 src_investor = base.mul(_price).mul(src_ratio).div(10000); 
-            IBEP20(_source_token).transfer(_holder_list[i], src_investor);
-            uint256 sub_src_amnt = src_amnt*src_ratio/100;
-            holder._source_contribution = holder._source_contribution.sub(sub_src_amnt);
+            if (tgt_ratio != 0) {
+                uint256 base = src_amnt.mul(100-_commission_rate);
+                uint256 src_investor = base.mul(tgt_ratio).div(10000); 
+                IBEP20(_source_token).transfer(_holder_list[i], src_investor);
+                uint256 sub_tgt_amnt = tgt_amnt.mul(tgt_ratio).div(100);
+                holder._target_contribution = holder._target_contribution.sub(sub_tgt_amnt);
+            }
         }
         // update
         request._tot_vote_power_at_termination = _tot_source_contribution.add(_tot_target_contribution.mul(_price));
         _tot_source_contribution = _tot_source_contribution.sub(src_amnt); 
         _tot_target_contribution = _tot_target_contribution.sub(tgt_amnt); 
         proposal._released = true;
+    }
+
+
+    function reject_request(uint index, uint idx) private {
+        PaymentRequest storage request = _proposals[index]._payment_requests[idx];
+        request._rejected        = true;
+        request._tot_vote_power_at_termination = _tot_source_contribution.add(_tot_target_contribution.mul(_price)); 
     }
 
 
@@ -302,5 +326,47 @@ contract Project is IProject {
     function reject_payment(uint            index,
                             uint            idx,
                             string calldata reject_meta) external {
+        PaymentRequest storage request = _proposals[index]._payment_requests[idx];
+        request._request_rejections[msg.sender]  = true;
+        request._reject_meta[msg.sender]         = reject_meta;
+        uint256 vote_power                       = get_vote_power(msg.sender);
+        request._rejected_vote_power[msg.sender] = vote_power;
+        request._tot_rejected_vote_power         = request._tot_rejected_vote_power.add(vote_power); 
+
+        if(is_request_rejected(index, idx) == true) {
+            reject_request(index, idx);
+        }
+
     } 
+
+
+    function get_proposal_voter_info(uint index,
+                               address voter) external view
+                            returns (bool, bool, uint256, uint256, string memory, string memory) {
+        Proposal storage proposal = _proposals[index]; 
+        return (proposal._proposal_approvals[voter], proposal._proposal_rejections[voter],
+                proposal._approved_vote_power[voter], proposal._rejected_vote_power[voter],
+                proposal._approval_meta[voter], proposal._reject_meta[voter]);
+    }
+
+
+    function get_request_voter_info(uint index,
+                                    uint idx,
+                                    address voter) external view
+                            returns (bool, bool, uint256, uint256, string memory, string memory) {
+        PaymentRequest storage request = _proposals[index]._payment_requests[idx]; 
+        return (request._request_approvals[voter], request._request_rejections[voter],
+                request._approved_vote_power[voter], request._rejected_vote_power[voter],
+                request._approval_meta[voter], request._reject_meta[voter]);
+    }
+
+
+    function get_request_info(uint index,
+                              uint idx) external view
+                            returns (address, string memory, bool, bool, uint256, uint256, uint256) {
+        PaymentRequest storage request = _proposals[index]._payment_requests[idx]; 
+        return (request._contributor, request._payment_request_meta, request._approved,
+                request._rejected, request._tot_approved_vote_power, request._tot_rejected_vote_power,
+                request._tot_vote_power_at_termination);
+    }
 }

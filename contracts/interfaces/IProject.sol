@@ -26,4 +26,14 @@ interface IProject {
     function reject_payment(uint            index,
                             uint            idx,
                             string calldata reject_meta) external;
+    function get_proposal_voter_info(uint index,
+                               address voter) external view
+                            returns (bool, bool, uint256, uint256, string memory, string memory);
+    function get_request_voter_info(uint index,
+                                    uint idx,
+                                    address voter) external view
+                            returns (bool, bool, uint256, uint256, string memory, string memory);
+    function get_request_info(uint index,
+                              uint idx) external view
+                            returns (address, string memory, bool, bool, uint256, uint256, uint256);
 }
