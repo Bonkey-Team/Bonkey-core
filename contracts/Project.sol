@@ -108,8 +108,8 @@ contract Project is IProject {
     }
 
     // TODO withdraw
-
-
+    // TODO block deadline 
+    // TODO separate library
     // TODO check locked fund
     function propose(string  calldata proposal_meta,
                      uint256 amount_target_token) external {
