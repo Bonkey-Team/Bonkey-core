@@ -10,12 +10,12 @@ const { projectId, mnemonic } = require('./secrets.json');
 module.exports = {
     solidity: {
         version: "0.5.16",
-        //settings: {
-        //    optimizer: {
-        //        enabled: true,
-        //        runs: 1000
-        //    }
-        //}
+        settings: {
+            optimizer: {
+                enabled: true,
+                runs: 1000
+            }
+        }
     },
     networks: {
         mainnet: {

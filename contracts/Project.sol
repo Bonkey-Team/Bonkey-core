@@ -4,7 +4,6 @@ import './interfaces/IBEP20.sol';
 import './interfaces/IProject.sol';
 import './libraries/SafeMath.sol';
 
-
 contract Project is IProject {
 
     using SafeMath for uint256; 
@@ -50,7 +49,6 @@ contract Project is IProject {
         uint256                      _tot_vote_power_at_termination;
     }
 
-    
     address public                          _manager;
     address public                          _source_token;
     address public                          _target_token;
