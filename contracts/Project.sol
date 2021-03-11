@@ -7,7 +7,7 @@ import './libraries/SafeMath.sol';
 contract Project is IProject {
 
     using SafeMath for uint256; 
-    
+
     struct Proposal {
         string                       _proposal_meta;
         uint256                      _proposed_amount;
@@ -54,10 +54,12 @@ contract Project is IProject {
     address public                          _target_token;
     uint256 public                          _price;
     uint256 public                          _min_rate_to_pass_proposal;
-    uint256 public                          _min_rate_to_withdraw;
+    uint256 public                          _min_rate_to_pass_request;
     uint256 public                          _commission_rate;
     uint256 public                          _tot_source_contribution;
     uint256 public                          _tot_target_contribution;
+    uint256 public                          _tot_source_locked;
+    uint256 public                          _tot_target_locked;
     string  public                          _project_meta;
     address[] public                        _holder_list;
     mapping (address => StakeHolder) public _stake_holders;
@@ -80,9 +82,11 @@ contract Project is IProject {
         _target_token              = target_token;
         _price                     = price;
         _min_rate_to_pass_proposal = min_rate_to_pass_proposal;
-        _min_rate_to_withdraw      = min_rate_to_withdraw;
+        _min_rate_to_pass_request  = min_rate_to_withdraw;
         _commission_rate           = commission_rate;
         _project_meta              = project_meta;
+        _tot_source_locked         = 0;
+        _tot_target_locked         = 0;
     }
 
 
@@ -107,10 +111,25 @@ contract Project is IProject {
         }
     }
 
-    // TODO withdraw
+    
+    function withdraw(uint256 source_amount,
+                      uint256 target_amount) external {
+        require(source_amount < _tot_source_contribution.sub(_tot_source_locked) && 
+                target_amount < _tot_target_contribution.sub(_tot_target_locked),
+                "Insufficient fund for withdraw");
+        StakeHolder storage stake_holder = _stake_holders[msg.sender];
+        require(source_amount < stake_holder._source_contribution && 
+                target_amount < stake_holder._target_contribution, 
+                "You don't have enough fund to withdraw");
+        IBEP20(_source_token).transfer(msg.sender, source_amount);
+        IBEP20(_target_token).transfer(msg.sender, target_amount);
+        _tot_source_contribution = _tot_source_contribution.sub(source_amount);
+        _tot_target_contribution = _tot_target_contribution.sub(target_amount);
+    }
+
+
     // TODO block deadline 
-    // TODO separate library
-    // TODO check locked fund
+    // TODO emit events 
     function propose(string  calldata proposal_meta,
                      uint256 amount_target_token) external {
         require(msg.sender == _manager, "only manager can propose"); // TODO anyone can propose
@@ -138,7 +157,8 @@ contract Project is IProject {
         Proposal storage proposal = _proposals[index];
         proposal._approved        = true;
         proposal._tot_vote_power_at_termination = _tot_source_contribution.add(_tot_target_contribution.mul(_price)); 
-        // TODO lock fund
+        _tot_target_locked = _tot_target_locked.add(proposal._proposed_amount);
+        _tot_source_locked = _tot_source_locked.add(proposal._proposed_amount.mul(_price));
     }
 
 
@@ -214,7 +234,7 @@ contract Project is IProject {
         PaymentRequest storage request = _proposals[index]._payment_requests[idx];
         uint256 total_voting_power  = _tot_source_contribution.add(_tot_target_contribution.mul(_price));
         uint256 tot_approved_vote_power = request._tot_approved_vote_power;
-        if(tot_approved_vote_power.mul(100).div(total_voting_power) >= _min_rate_to_pass_proposal) {
+        if(tot_approved_vote_power.mul(100).div(total_voting_power) >= _min_rate_to_pass_request) {
             return true;
         }
         return false;
@@ -226,7 +246,7 @@ contract Project is IProject {
         PaymentRequest storage request = _proposals[index]._payment_requests[idx];
         uint256 total_voting_power  = _tot_source_contribution.add(_tot_target_contribution.mul(_price));
         uint256 tot_rejected_vote_power = request._tot_rejected_vote_power;
-        if(tot_rejected_vote_power.mul(100).div(total_voting_power) > (100 - _min_rate_to_pass_proposal)) {
+        if(tot_rejected_vote_power.mul(100).div(total_voting_power) > (100 - _min_rate_to_pass_request)) {
             return true;
         }
         return false;
