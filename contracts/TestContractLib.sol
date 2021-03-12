@@ -1,7 +1,7 @@
 pragma solidity ^0.5.0;
 
 library TestLibrary {
-    function libDo(uint256 n) external returns (uint256) {
+    function libDo(uint256 n) external pure returns (uint256) {
         return n * 2;
     }
 }
@@ -62,14 +62,14 @@ library SafeMath0 {
 
 contract TestContractLib {
 
-    function printNumber(uint256 amount) public returns (uint256) {
+    function printNumber(uint256 amount) public pure returns (uint256) {
         uint result = TestLibrary.libDo(amount);
         uint sub = SafeMath0.sub(amount, 1);
         uint add = SafeMath0.add(amount, 1);
         uint div = SafeMath0.div(amount, 1);
         uint mod = SafeMath0.mod(amount, 1);
         uint mul = SafeMath0.mul(amount, 1);
-        return result;
+        return result+sub+add+div+mod+mul;
     }
 }
 

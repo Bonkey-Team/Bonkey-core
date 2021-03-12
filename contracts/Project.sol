@@ -87,6 +87,7 @@ contract Project is IProject {
         _project_meta              = project_meta;
         _tot_source_locked         = 0;
         _tot_target_locked         = 0;
+        emit Init(source_token, target_token, price, min_rate_to_pass_proposal, min_rate_to_withdraw, commission_rate);
     }
 
 
@@ -109,6 +110,7 @@ contract Project is IProject {
             stake_holder._target_contribution = stake_holder._target_contribution.add(amount); 
             _tot_target_contribution          = _tot_target_contribution.add(amount);
         }
+        emit Deposit(token, amount);
     }
 
     
@@ -125,6 +127,7 @@ contract Project is IProject {
         IBEP20(_target_token).transfer(msg.sender, target_amount);
         _tot_source_contribution = _tot_source_contribution.sub(source_amount);
         _tot_target_contribution = _tot_target_contribution.sub(target_amount);
+        emit Withdraw(source_amount, target_amount);
     }
 
 
@@ -138,6 +141,7 @@ contract Project is IProject {
         proposal._proposal_meta   = proposal_meta;
         proposal._proposed_amount = amount_target_token;
         _num_proposals = _num_proposals.add(1);
+        emit Propose(_num_proposals, amount_target_token);
     }
 
 
@@ -159,6 +163,7 @@ contract Project is IProject {
         proposal._tot_vote_power_at_termination = _tot_source_contribution.add(_tot_target_contribution.mul(_price)); 
         _tot_target_locked = _tot_target_locked.add(proposal._proposed_amount);
         _tot_source_locked = _tot_source_locked.add(proposal._proposed_amount.mul(_price));
+        emit ProposalApproved(index);
     }
 
 
@@ -192,6 +197,7 @@ contract Project is IProject {
         if(is_proposal_approved(index) == true) {
             make_proposal_approved(index);
         }
+        emit ApproveProposal(index);
     }
 
 
@@ -211,6 +217,7 @@ contract Project is IProject {
         Proposal storage proposal = _proposals[index];
         proposal._rejected        = true;
         proposal._tot_vote_power_at_termination = _tot_source_contribution.add(_tot_target_contribution.mul(_price)); 
+        emit ProposalRejected(index);
     }
 
 
@@ -226,6 +233,7 @@ contract Project is IProject {
         if(is_proposal_rejected(index) == true) {
             make_proposal_rejected(index);
         }
+        emit RejectProposal(index);
     }
 
 
@@ -289,6 +297,7 @@ contract Project is IProject {
         _tot_source_contribution = _tot_source_contribution.sub(src_amnt); 
         _tot_target_contribution = _tot_target_contribution.sub(tgt_amnt); 
         proposal._released = true;
+        emit PaymentReleased(index, idx);
     }
 
 
@@ -296,6 +305,7 @@ contract Project is IProject {
         PaymentRequest storage request = _proposals[index]._payment_requests[idx];
         request._rejected        = true;
         request._tot_vote_power_at_termination = _tot_source_contribution.add(_tot_target_contribution.mul(_price)); 
+        emit PaymentRejected(index, idx);
     }
 
 
@@ -313,6 +323,7 @@ contract Project is IProject {
         PaymentRequest storage request = _proposals[index]._payment_requests[idx];
         request._payment_request_meta = payment_meta;
         request._contributor = msg.sender;
+        emit RequestPayment(index, idx);
     }
 
 
@@ -340,6 +351,7 @@ contract Project is IProject {
         if(is_request_approved(index, idx) == true) {
             release_proposal(index, idx);
         }
+        emit ApprovePayment(index, idx);
     }
 
 
@@ -356,7 +368,7 @@ contract Project is IProject {
         if(is_request_rejected(index, idx) == true) {
             reject_request(index, idx);
         }
-
+        emit RejectPayment(index, idx);
     } 
 
 
