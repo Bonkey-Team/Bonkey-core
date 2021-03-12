@@ -29,7 +29,8 @@ interface IProject {
     event Propose(uint    idx,
                   uint256 amount_target_token);
     function propose(string  calldata proposal_meta,
-                     uint256 amount_target_token) external; 
+                     uint256 amount_target_token,
+                     uint256 deadline) external; 
 
     event ApproveProposal(uint256 index);
     event ProposalApproved(uint256 index);
@@ -41,10 +42,13 @@ interface IProject {
     function reject_proposal(uint            index,
                              string calldata reject_meta) external;
 
+    function check_proposal(uint index) external returns (bool);
+
     event RequestPayment(uint index,
                          uint idx);
     function request_payment(uint            index,
                              uint            idx,
+                             uint256         deadline,
                              string calldata payment_meta) external;
 
     event ApprovePayment(uint index,
@@ -62,6 +66,9 @@ interface IProject {
     function reject_payment(uint            index,
                             uint            idx,
                             string calldata reject_meta) external;
+
+    function check_payment(uint index,
+                           uint idx) external returns(bool);
 
     function get_proposal_voter_info(uint index,
                                address voter) external view

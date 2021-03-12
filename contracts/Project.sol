@@ -11,6 +11,7 @@ contract Project is IProject {
     struct Proposal {
         string                       _proposal_meta;
         uint256                      _proposed_amount;
+        uint256                      _deadline;
         bool                         _approved;
         bool                         _rejected;
         bool                         _released;
@@ -47,6 +48,7 @@ contract Project is IProject {
         uint256                      _tot_approved_vote_power;
         uint256                      _tot_rejected_vote_power;
         uint256                      _tot_vote_power_at_termination;
+        uint256                      _deadline;
     }
 
     address public                          _manager;
@@ -54,6 +56,7 @@ contract Project is IProject {
     address public                          _target_token;
     uint256 public                          _price;
     uint256 public                          _min_rate_to_pass_proposal;
+    uint256 public                          _min_rate_to_pass_dl; // after deadline
     uint256 public                          _min_rate_to_pass_request;
     uint256 public                          _commission_rate;
     uint256 public                          _tot_source_contribution;
@@ -66,6 +69,11 @@ contract Project is IProject {
 
     uint256 public                          _num_proposals;
     mapping (uint => Proposal) public       _proposals;
+
+
+    function getBlockNumber() internal view returns (uint) {
+        return block.number;
+    }
 
 
     // core logics
@@ -87,6 +95,7 @@ contract Project is IProject {
         _project_meta              = project_meta;
         _tot_source_locked         = 0;
         _tot_target_locked         = 0;
+        _min_rate_to_pass_dl       = 50;
         emit Init(source_token, target_token, price, min_rate_to_pass_proposal, min_rate_to_withdraw, commission_rate);
     }
 
@@ -123,6 +132,7 @@ contract Project is IProject {
         require(source_amount < stake_holder._source_contribution && 
                 target_amount < stake_holder._target_contribution, 
                 "You don't have enough fund to withdraw");
+        // check pending proposal
         IBEP20(_source_token).transfer(msg.sender, source_amount);
         IBEP20(_target_token).transfer(msg.sender, target_amount);
         _tot_source_contribution = _tot_source_contribution.sub(source_amount);
@@ -131,15 +141,15 @@ contract Project is IProject {
     }
 
 
-    // TODO block deadline 
-    // TODO emit events 
     function propose(string  calldata proposal_meta,
-                     uint256 amount_target_token) external {
+                     uint256 amount_target_token,
+                     uint256 deadline) external {
         require(msg.sender == _manager, "only manager can propose"); // TODO anyone can propose
         require(amount_target_token <= _tot_target_contribution);
         Proposal storage proposal = _proposals[_num_proposals];
         proposal._proposal_meta   = proposal_meta;
         proposal._proposed_amount = amount_target_token;
+        proposal._deadline        = deadline;
         _num_proposals = _num_proposals.add(1);
         emit Propose(_num_proposals, amount_target_token);
     }
@@ -151,6 +161,9 @@ contract Project is IProject {
         uint256 total_voting_power  = _tot_source_contribution.add(_tot_target_contribution.mul(_price));
         uint256 tot_approved_vote_power = proposal._tot_approved_vote_power;
         if(tot_approved_vote_power.mul(100).div(total_voting_power) >= _min_rate_to_pass_proposal) {
+            return true;
+        } else if (proposal._deadline > getBlockNumber() && 
+                  tot_approved_vote_power.mul(100).div(total_voting_power) >= _min_rate_to_pass_dl) {
             return true;
         }
         return false;
@@ -208,6 +221,9 @@ contract Project is IProject {
         uint256 tot_rejected_vote_power = proposal._tot_rejected_vote_power;
         if(tot_rejected_vote_power.mul(100).div(total_voting_power) > (100 - _min_rate_to_pass_proposal)) {
             return true;
+        } else if(proposal._deadline < getBlockNumber() && 
+                  tot_rejected_vote_power.mul(100).div(total_voting_power) > (100 - _min_rate_to_pass_dl)) {
+            return true;
         }
         return false;
     }
@@ -237,12 +253,27 @@ contract Project is IProject {
     }
 
 
+    function check_proposal(uint index) external returns (bool) {
+        if(is_proposal_approved(index) == true) {
+            make_proposal_approved(index);
+            return true;
+        } else if(is_proposal_rejected(index) == true) {
+            make_proposal_rejected(index);
+            return true;
+        } 
+        return false;
+    }
+
+
     function is_request_approved(uint index, uint idx) private view returns(bool) {
         // copmute total voting power
         PaymentRequest storage request = _proposals[index]._payment_requests[idx];
         uint256 total_voting_power  = _tot_source_contribution.add(_tot_target_contribution.mul(_price));
         uint256 tot_approved_vote_power = request._tot_approved_vote_power;
         if(tot_approved_vote_power.mul(100).div(total_voting_power) >= _min_rate_to_pass_request) {
+            return true;
+        } else if(request._deadline < getBlockNumber() &&
+                  tot_approved_vote_power.mul(100).div(total_voting_power) >= _min_rate_to_pass_dl) {
             return true;
         }
         return false;
@@ -255,6 +286,9 @@ contract Project is IProject {
         uint256 total_voting_power  = _tot_source_contribution.add(_tot_target_contribution.mul(_price));
         uint256 tot_rejected_vote_power = request._tot_rejected_vote_power;
         if(tot_rejected_vote_power.mul(100).div(total_voting_power) > (100 - _min_rate_to_pass_request)) {
+            return true;
+        } else if(request._deadline < getBlockNumber() && 
+                  tot_rejected_vote_power.mul(100).div(total_voting_power) > (100 - _min_rate_to_pass_dl)) {
             return true;
         }
         return false;
@@ -319,10 +353,12 @@ contract Project is IProject {
 
     function request_payment(uint            index,
                              uint            idx,
+                             uint256         deadline,
                              string calldata payment_meta) external can_request_payment(index) {
         PaymentRequest storage request = _proposals[index]._payment_requests[idx];
         request._payment_request_meta = payment_meta;
         request._contributor = msg.sender;
+        request._deadline = deadline;
         emit RequestPayment(index, idx);
     }
 
@@ -370,6 +406,19 @@ contract Project is IProject {
         }
         emit RejectPayment(index, idx);
     } 
+
+
+    function check_payment(uint index,
+                           uint idx) external returns(bool) {
+        if(is_request_approved(index, idx)) {
+            release_proposal(index, idx);
+            return true;
+        } else if(is_request_rejected(index, idx)) {
+            reject_request(index, idx);
+            return true;
+        }
+        return false;
+    }
 
 
     function get_proposal_voter_info(uint index,
