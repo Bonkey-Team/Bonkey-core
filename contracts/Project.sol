@@ -11,7 +11,6 @@ contract Project is IProject {
     struct Proposal {
         string                       _proposal_meta;
         uint256                      _proposed_amount;
-        uint256                      _deadline;
         bool                         _approved;
         bool                         _rejected;
         bool                         _released;
@@ -24,6 +23,7 @@ contract Project is IProject {
         uint256                      _tot_approved_vote_power;
         uint256                      _tot_rejected_vote_power;
         uint256                      _tot_vote_power_at_termination;
+        uint256                      _deadline;
 
         uint256                      _num_payment_requests;
         mapping (uint => PaymentRequest) _payment_requests;
@@ -56,8 +56,8 @@ contract Project is IProject {
     address public                          _target_token;
     uint256 public                          _price;
     uint256 public                          _min_rate_to_pass_proposal;
-    uint256 public                          _min_rate_to_pass_dl; // after deadline
     uint256 public                          _min_rate_to_pass_request;
+    uint256 public                          _min_rate_to_pass_dl; // after deadline
     uint256 public                          _commission_rate;
     uint256 public                          _tot_source_contribution;
     uint256 public                          _tot_target_contribution;
@@ -81,7 +81,7 @@ contract Project is IProject {
                       address target_token,
                       uint256 price,
                       uint256 min_rate_to_pass_proposal,
-                      uint256 min_rate_to_withdraw,
+                      uint256 min_rate_to_pass_request,
                       uint256 commission_rate,
                       string  calldata project_meta) external {
         require(_manager == address(0x0), "Project already initiated.");
@@ -90,13 +90,15 @@ contract Project is IProject {
         _target_token              = target_token;
         _price                     = price;
         _min_rate_to_pass_proposal = min_rate_to_pass_proposal;
-        _min_rate_to_pass_request  = min_rate_to_withdraw;
+        _min_rate_to_pass_request  = min_rate_to_pass_request;
         _commission_rate           = commission_rate;
         _project_meta              = project_meta;
         _tot_source_locked         = 0;
         _tot_target_locked         = 0;
         _min_rate_to_pass_dl       = 50;
-        emit Init(source_token, target_token, price, min_rate_to_pass_proposal, min_rate_to_withdraw, commission_rate);
+        emit Init(source_token, target_token,
+                  price, min_rate_to_pass_proposal,
+                  min_rate_to_pass_request, commission_rate);
     }
 
 
@@ -125,12 +127,16 @@ contract Project is IProject {
     
     function withdraw(uint256 source_amount,
                       uint256 target_amount) external {
-        require(source_amount < _tot_source_contribution.sub(_tot_source_locked) && 
-                target_amount < _tot_target_contribution.sub(_tot_target_locked),
+        uint256 tot_source_after_withdraw = _tot_source_contribution.sub(source_amount);
+        uint256 tot_target_after_withdraw = _tot_target_contribution.sub(target_amount);
+        require((source_amount < tot_source_after_withdraw && 
+                target_amount < tot_target_after_withdraw),
                 "Insufficient fund for withdraw");
+        require(tot_source_after_withdraw.div(tot_target_after_withdraw) >= _price,
+                "vote balance has been broken");
         StakeHolder storage stake_holder = _stake_holders[msg.sender];
-        require(source_amount < stake_holder._source_contribution && 
-                target_amount < stake_holder._target_contribution, 
+        require(source_amount <= stake_holder._source_contribution && 
+                target_amount <= stake_holder._target_contribution, 
                 "You don't have enough fund to withdraw");
         // check pending proposal
         IBEP20(_source_token).transfer(msg.sender, source_amount);
@@ -162,7 +168,7 @@ contract Project is IProject {
         uint256 tot_approved_vote_power = proposal._tot_approved_vote_power;
         if(tot_approved_vote_power.mul(100).div(total_voting_power) >= _min_rate_to_pass_proposal) {
             return true;
-        } else if (proposal._deadline > getBlockNumber() && 
+        } else if (proposal._deadline < getBlockNumber() && 
                   tot_approved_vote_power.mul(100).div(total_voting_power) >= _min_rate_to_pass_dl) {
             return true;
         }
