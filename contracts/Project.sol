@@ -54,11 +54,11 @@ contract Project is IProject {
     address public                          _manager;
     address public                          _source_token;
     address public                          _target_token;
-    uint256 public                          _price;
-    uint256 public                          _min_rate_to_pass_proposal;
-    uint256 public                          _min_rate_to_pass_request;
+    uint256 public                          _price; // FIXME what if price less than 1
+    uint256 public                          _min_rate_to_pass_proposal; // FIXME increase accuracy
+    uint256 public                          _min_rate_to_pass_request;  // FIXME increase accuracy
     uint256 public                          _min_rate_to_pass_dl; // after deadline
-    uint256 public                          _commission_rate;
+    uint256 public                          _commission_rate; // FIXME increase accuracy
     uint256 public                          _tot_source_contribution;
     uint256 public                          _tot_target_contribution;
     uint256 public                          _tot_source_locked;
@@ -95,7 +95,7 @@ contract Project is IProject {
         _project_meta              = project_meta;
         _tot_source_locked         = 0;
         _tot_target_locked         = 0;
-        _min_rate_to_pass_dl       = 50;
+        _min_rate_to_pass_dl       = 50; // FIXME this number should be more accurate
         emit Init(source_token, target_token,
                   price, min_rate_to_pass_proposal,
                   min_rate_to_pass_request, commission_rate);
@@ -129,8 +129,8 @@ contract Project is IProject {
                       uint256 target_amount) external {
         uint256 tot_source_after_withdraw = _tot_source_contribution.sub(source_amount);
         uint256 tot_target_after_withdraw = _tot_target_contribution.sub(target_amount);
-        require((source_amount < tot_source_after_withdraw && 
-                target_amount < tot_target_after_withdraw),
+        require((tot_source_after_withdraw > 0 && 
+                tot_target_after_withdraw > 0),
                 "Insufficient fund for withdraw");
         require(tot_source_after_withdraw.div(tot_target_after_withdraw) >= _price,
                 "vote balance has been broken");
@@ -259,6 +259,7 @@ contract Project is IProject {
     }
 
 
+    // this is for deadline purposes
     function check_proposal(uint index) external returns (bool) {
         if(is_proposal_approved(index) == true) {
             make_proposal_approved(index);
@@ -366,23 +367,25 @@ contract Project is IProject {
         request._contributor = msg.sender;
         request._deadline = deadline;
         emit RequestPayment(index, idx);
+        idx = idx + 1;
     }
 
 
-    modifier can_approve_request(uint index, uint idx) {
+    modifier can_vote_request(uint index, uint idx) {
         require(index < _num_proposals);
         Proposal storage proposal = _proposals[index];
         require(proposal._approved == true && proposal._released == false);
         PaymentRequest storage request = proposal._payment_requests[idx];         
         require(request._request_approvals[msg.sender] == false);
         require(request._request_rejections[msg.sender] == false);
+        require(request._approved == false && request._rejected == false);
         _;
     }
 
 
     function approve_payment(uint            index,
                              uint            idx,
-                             string calldata approval_meta) external {
+                             string calldata approval_meta) external can_vote_request(index, idx) {
         PaymentRequest storage request = _proposals[index]._payment_requests[idx];
         request._request_approvals[msg.sender]   = true;
         request._approval_meta[msg.sender]       = approval_meta;
@@ -399,7 +402,7 @@ contract Project is IProject {
 
     function reject_payment(uint            index,
                             uint            idx,
-                            string calldata reject_meta) external {
+                            string calldata reject_meta) external can_vote_request(index, idx) {
         PaymentRequest storage request = _proposals[index]._payment_requests[idx];
         request._request_rejections[msg.sender]  = true;
         request._reject_meta[msg.sender]         = reject_meta;
