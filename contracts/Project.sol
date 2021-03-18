@@ -54,11 +54,11 @@ contract Project is IProject {
     address public                          _manager;
     address public                          _source_token;
     address public                          _target_token;
-    uint256 public                          _price; // FIXME what if price less than 1
-    uint256 public                          _min_rate_to_pass_proposal; // FIXME increase accuracy
-    uint256 public                          _min_rate_to_pass_request;  // FIXME increase accuracy
-    uint256 public                          _min_rate_to_pass_dl; // after deadline
-    uint256 public                          _commission_rate; // FIXME increase accuracy
+    uint256 public                          _price;
+    uint256 public                          _min_rate_to_pass_proposal;
+    uint256 public                          _min_rate_to_pass_request;
+    uint256 public                          _min_rate_to_pass_dl;
+    uint256 public                          _commission_rate;
     uint256 public                          _tot_source_contribution;
     uint256 public                          _tot_target_contribution;
     uint256 public                          _tot_source_locked;
@@ -73,6 +73,11 @@ contract Project is IProject {
 
     function getBlockNumber() internal view returns (uint) {
         return block.number;
+    }
+
+
+    function target_to_source(uint256 amount) private view returns (uint256) {
+        return amount.mul(_price).div(1e18);
     }
 
 
@@ -95,7 +100,7 @@ contract Project is IProject {
         _project_meta              = project_meta;
         _tot_source_locked         = 0;
         _tot_target_locked         = 0;
-        _min_rate_to_pass_dl       = 50; // FIXME this number should be more accurate
+        _min_rate_to_pass_dl       = 1e18/2; // FIXME this number should be more accurate
         emit Init(source_token, target_token,
                   price, min_rate_to_pass_proposal,
                   min_rate_to_pass_request, commission_rate);
@@ -116,7 +121,9 @@ contract Project is IProject {
             _tot_source_contribution          = _tot_source_contribution.add(amount);
             
         } else {
-            require(amount.mul(_price).add(_tot_target_contribution.mul(_price)) <= _tot_source_contribution,
+            uint256 amount_in_source = target_to_source(amount);
+            uint256 tot_tgt_in_source = target_to_source(_tot_target_contribution);
+            require(amount_in_source.add(tot_tgt_in_source) <= _tot_source_contribution,
                     "can not invest more than source token value");
             stake_holder._target_contribution = stake_holder._target_contribution.add(amount); 
             _tot_target_contribution          = _tot_target_contribution.add(amount);
@@ -129,10 +136,11 @@ contract Project is IProject {
                       uint256 target_amount) external {
         uint256 tot_source_after_withdraw = _tot_source_contribution.sub(source_amount);
         uint256 tot_target_after_withdraw = _tot_target_contribution.sub(target_amount);
-        require((tot_source_after_withdraw > 0 && 
-                tot_target_after_withdraw > 0),
+        require((tot_source_after_withdraw >= _tot_source_locked && 
+                tot_target_after_withdraw >= _tot_target_locked),
                 "Insufficient fund for withdraw");
-        require(tot_source_after_withdraw.div(tot_target_after_withdraw) >= _price,
+        uint256 tot_tgt_in_source = target_to_source(tot_target_after_withdraw);
+        require(tot_source_after_withdraw >= tot_tgt_in_source,
                 "vote balance has been broken");
         StakeHolder storage stake_holder = _stake_holders[msg.sender];
         require(source_amount <= stake_holder._source_contribution && 
@@ -164,12 +172,13 @@ contract Project is IProject {
     function is_proposal_approved(uint index) private view returns(bool) {
         // copmute total voting power
         Proposal storage proposal   = _proposals[index];
-        uint256 total_voting_power  = _tot_source_contribution.add(_tot_target_contribution.mul(_price));
+        uint256 tot_tgt_in_source = target_to_source(_tot_target_contribution);
+        uint256 total_voting_power  = _tot_source_contribution.add(tot_tgt_in_source);
         uint256 tot_approved_vote_power = proposal._tot_approved_vote_power;
-        if(tot_approved_vote_power.mul(100).div(total_voting_power) >= _min_rate_to_pass_proposal) {
+        if(tot_approved_vote_power.mul(1e18).div(total_voting_power) >= _min_rate_to_pass_proposal) {
             return true;
         } else if (proposal._deadline < getBlockNumber() && 
-                  tot_approved_vote_power.mul(100).div(total_voting_power) >= _min_rate_to_pass_dl) {
+                  tot_approved_vote_power.mul(1e18).div(total_voting_power) >= _min_rate_to_pass_dl) {
             return true;
         }
         return false;
@@ -179,9 +188,11 @@ contract Project is IProject {
     function make_proposal_approved(uint index) private {
         Proposal storage proposal = _proposals[index];
         proposal._approved        = true;
-        proposal._tot_vote_power_at_termination = _tot_source_contribution.add(_tot_target_contribution.mul(_price)); 
+        uint256 tot_tgt_in_source = target_to_source(_tot_target_contribution);
+        proposal._tot_vote_power_at_termination = _tot_source_contribution.add(tot_tgt_in_source); 
         _tot_target_locked = _tot_target_locked.add(proposal._proposed_amount);
-        _tot_source_locked = _tot_source_locked.add(proposal._proposed_amount.mul(_price));
+        uint256 proposed_in_source = target_to_source(proposal._proposed_amount);
+        _tot_source_locked = _tot_source_locked.add(proposed_in_source);
         emit ProposalApproved(index);
     }
 
@@ -189,7 +200,8 @@ contract Project is IProject {
     function get_vote_power(address approver) private view returns(uint256) {
         StakeHolder storage stake_holder = _stake_holders[approver];
         uint256 vote_power = stake_holder._source_contribution; 
-        vote_power = vote_power.add(stake_holder._target_contribution.mul(_price));
+        uint256 tgt_contrib_in_source = target_to_source(stake_holder._target_contribution);
+        vote_power = vote_power.add(tgt_contrib_in_source);
         return vote_power;
     }
 
@@ -197,9 +209,9 @@ contract Project is IProject {
     modifier can_vote_proposal(uint index) {
         require(index < _num_proposals, "vote for an unexisted proposal");
         Proposal storage proposal = _proposals[index];
-        require(proposal._approved == false && proposal._rejected == false);
-        require(proposal._proposal_approvals[msg.sender] == false);
-        require(proposal._proposal_rejections[msg.sender] == false);
+        require(proposal._approved == false && proposal._rejected == false, 'proposal can not be voted anymore');
+        require(proposal._proposal_approvals[msg.sender] == false, 'already accepted by you');
+        require(proposal._proposal_rejections[msg.sender] == false, 'already rejected by you');
         _;
     }
 
@@ -223,12 +235,13 @@ contract Project is IProject {
     function is_proposal_rejected(uint index) private view returns(bool) {
         // copmute total voting power
         Proposal storage proposal   = _proposals[index];
-        uint256 total_voting_power  = _tot_source_contribution.add(_tot_target_contribution.mul(_price));
+        uint256 tot_tgt_contrib_in_source = target_to_source(_tot_target_contribution);
+        uint256 total_voting_power  = _tot_source_contribution.add(tot_tgt_contrib_in_source);
         uint256 tot_rejected_vote_power = proposal._tot_rejected_vote_power;
-        if(tot_rejected_vote_power.mul(100).div(total_voting_power) > (100 - _min_rate_to_pass_proposal)) {
+        if(tot_rejected_vote_power.mul(1e18).div(total_voting_power) > (1e18 - _min_rate_to_pass_proposal)) {
             return true;
         } else if(proposal._deadline < getBlockNumber() && 
-                  tot_rejected_vote_power.mul(100).div(total_voting_power) > (100 - _min_rate_to_pass_dl)) {
+                  tot_rejected_vote_power.mul(1e18).div(total_voting_power) > (1e18 - _min_rate_to_pass_dl)) {
             return true;
         }
         return false;
@@ -238,7 +251,8 @@ contract Project is IProject {
     function make_proposal_rejected(uint index) private {
         Proposal storage proposal = _proposals[index];
         proposal._rejected        = true;
-        proposal._tot_vote_power_at_termination = _tot_source_contribution.add(_tot_target_contribution.mul(_price)); 
+        uint256 tot_tgt_contrib_in_source = target_to_source(_tot_target_contribution);
+        proposal._tot_vote_power_at_termination = _tot_source_contribution.add(tot_tgt_contrib_in_source); 
         emit ProposalRejected(index);
     }
 
@@ -275,12 +289,13 @@ contract Project is IProject {
     function is_request_approved(uint index, uint idx) private view returns(bool) {
         // copmute total voting power
         PaymentRequest storage request = _proposals[index]._payment_requests[idx];
-        uint256 total_voting_power  = _tot_source_contribution.add(_tot_target_contribution.mul(_price));
+        uint256 tot_tgt_contrib_in_source = target_to_source(_tot_target_contribution);
+        uint256 total_voting_power  = _tot_source_contribution.add(tot_tgt_contrib_in_source);
         uint256 tot_approved_vote_power = request._tot_approved_vote_power;
-        if(tot_approved_vote_power.mul(100).div(total_voting_power) >= _min_rate_to_pass_request) {
+        if(tot_approved_vote_power.mul(1e18).div(total_voting_power) >= _min_rate_to_pass_request) {
             return true;
         } else if(request._deadline < getBlockNumber() &&
-                  tot_approved_vote_power.mul(100).div(total_voting_power) >= _min_rate_to_pass_dl) {
+                  tot_approved_vote_power.mul(1e18).div(total_voting_power) >= _min_rate_to_pass_dl) {
             return true;
         }
         return false;
@@ -290,12 +305,13 @@ contract Project is IProject {
     function is_request_rejected(uint index, uint idx) private view returns(bool) {
         // copmute total voting power
         PaymentRequest storage request = _proposals[index]._payment_requests[idx];
-        uint256 total_voting_power  = _tot_source_contribution.add(_tot_target_contribution.mul(_price));
+        uint256 tot_tgt_contrib_in_source = target_to_source(_tot_target_contribution);
+        uint256 total_voting_power  = _tot_source_contribution.add(tot_tgt_contrib_in_source);
         uint256 tot_rejected_vote_power = request._tot_rejected_vote_power;
-        if(tot_rejected_vote_power.mul(100).div(total_voting_power) > (100 - _min_rate_to_pass_request)) {
+        if(tot_rejected_vote_power.mul(1e18).div(total_voting_power) > (1e18 - _min_rate_to_pass_request)) {
             return true;
         } else if(request._deadline < getBlockNumber() && 
-                  tot_rejected_vote_power.mul(100).div(total_voting_power) > (100 - _min_rate_to_pass_dl)) {
+                  tot_rejected_vote_power.mul(1e18).div(total_voting_power) > (1e18 - _min_rate_to_pass_dl)) {
             return true;
         }
         return false;
@@ -304,37 +320,38 @@ contract Project is IProject {
 
     function release_proposal(uint index, uint idx) private {
         Proposal storage proposal = _proposals[index];
-        uint256 src_amnt = proposal._proposed_amount.mul(_price);
+        uint256 src_amnt = target_to_source(proposal._proposed_amount);
         uint256 tgt_amnt = proposal._proposed_amount;
-        uint256 tgt_contributor = tgt_amnt.mul(100-_commission_rate).div(100);
-        uint256 src_contributor = src_amnt.mul(_commission_rate).div(100); 
+        uint256 tgt_contributor = tgt_amnt.mul(1e18-_commission_rate).div(1e18);
+        uint256 src_contributor = src_amnt.mul(_commission_rate).div(1e18); 
         PaymentRequest storage request = proposal._payment_requests[idx];         
         IBEP20(_source_token).transfer(request._contributor, src_contributor);
         IBEP20(_target_token).transfer(request._contributor, tgt_contributor);
         
         for(uint i=0; i<_holder_list.length; i++) {
             StakeHolder storage holder = _stake_holders[_holder_list[i]];
-            uint256 src_ratio = holder._source_contribution.mul(100).div(_tot_source_contribution);
-            uint256 tgt_ratio = holder._target_contribution.mul(100).div(_tot_target_contribution);
+            uint256 src_ratio = holder._source_contribution.mul(1e18).div(_tot_source_contribution);
+            uint256 tgt_ratio = holder._target_contribution.mul(1e18).div(_tot_target_contribution);
             // release to entrepreneur role 
             if (src_ratio != 0) {
-                uint256 base = tgt_amnt.mul(_commission_rate);
-                uint256 tgt_entrepreneur = base.mul(src_ratio).div(10000); 
+                uint256 base = tgt_amnt.mul(_commission_rate).div(1e18);
+                uint256 tgt_entrepreneur = base.mul(src_ratio).div(1e18); 
                 IBEP20(_target_token).transfer(_holder_list[i], tgt_entrepreneur);
-                uint256 sub_src_amnt = src_amnt*src_ratio/100;
+                uint256 sub_src_amnt = src_amnt*src_ratio/1e18;
                 holder._source_contribution = holder._source_contribution.sub(sub_src_amnt);
             }
             // release to investor role
             if (tgt_ratio != 0) {
-                uint256 base = src_amnt.mul(100-_commission_rate);
-                uint256 src_investor = base.mul(tgt_ratio).div(10000); 
+                uint256 base = src_amnt.mul(1e18-_commission_rate).div(1e18);
+                uint256 src_investor = base.mul(tgt_ratio).div(1e18); 
                 IBEP20(_source_token).transfer(_holder_list[i], src_investor);
-                uint256 sub_tgt_amnt = tgt_amnt.mul(tgt_ratio).div(100);
+                uint256 sub_tgt_amnt = tgt_amnt.mul(tgt_ratio).div(1e18);
                 holder._target_contribution = holder._target_contribution.sub(sub_tgt_amnt);
             }
         }
         // update
-        request._tot_vote_power_at_termination = _tot_source_contribution.add(_tot_target_contribution.mul(_price));
+        uint256 tot_tgt_contrib_in_source = target_to_source(_tot_target_contribution);
+        request._tot_vote_power_at_termination = _tot_source_contribution.add(tot_tgt_contrib_in_source);
         _tot_source_contribution = _tot_source_contribution.sub(src_amnt); 
         _tot_target_contribution = _tot_target_contribution.sub(tgt_amnt); 
         proposal._released = true;
@@ -345,7 +362,8 @@ contract Project is IProject {
     function reject_request(uint index, uint idx) private {
         PaymentRequest storage request = _proposals[index]._payment_requests[idx];
         request._rejected        = true;
-        request._tot_vote_power_at_termination = _tot_source_contribution.add(_tot_target_contribution.mul(_price)); 
+        uint256 tot_tgt_contrib_in_source = target_to_source(_tot_target_contribution);
+        request._tot_vote_power_at_termination = _tot_source_contribution.add(tot_tgt_contrib_in_source); 
         emit PaymentRejected(index, idx);
     }
 
