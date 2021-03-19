@@ -129,7 +129,6 @@ describe('Project', function () {
         expect(prop[4]).to.equal(false);
     });
 
-
     it('can reject proposal', async function () {
         const [owner, investor, contributor] = await ethers.getSigners();
 
@@ -297,7 +296,7 @@ describe('Project', function () {
 
         // lock the fund
         await this.project.propose("first proposal", e2w('0.5'), 108);
-        await this.project.approve_proposal(0, "owner's approval");
+        await this.project.approve_proposal(0, "owner's approval"); // >= 50%
        
         // withdraw 0.6 would not work 
         let throwed = false;
@@ -321,13 +320,13 @@ describe('Project', function () {
         await this.project.connect(owner).initiate(this.token0.address,
             this.token1.address, e2w('10'), e2w('0.9'), e2w('0.9'), e2w('0.1'), "first project");
         await this.project.connect(owner).deposit(this.token0.address, e2w('10'));
-        await this.project.connect(investor).deposit(this.token1.address, e2w('1'));
+        await this.project.connect(investor).deposit(this.token1.address, e2w('0.9'));
 
         let create_time = await this.project._create_block()
 
         // lock the fund
-        await this.project.propose("first proposal", e2w('0.5'), 117);
-        await this.project.reject_proposal(0, "owner's approval");
+        await this.project.propose("first proposal", e2w('0.5'), 120);
+        await this.project.connect(investor).approve_proposal(0, "investor's approval"); // less than 50%
        
         // withdraw 0.6 would not work 
         await this.project.connect(investor).withdraw(0, e2w('0.6'));
@@ -336,7 +335,7 @@ describe('Project', function () {
         expect(prop[3]).to.equal(true);
         expect(prop[4]).to.equal(false);
         assert.deepEqual(await this.project._tot_source_contribution(), bigNumberify(e2w('10')));
-        assert.deepEqual(await this.project._tot_target_contribution(), bigNumberify(e2w('0.4')));
+        assert.deepEqual(await this.project._tot_target_contribution(), bigNumberify(e2w('0.3')));
 
     });
 
@@ -361,6 +360,31 @@ describe('Project', function () {
 
         assert.deepEqual(await this.token0.balanceOf(contributor.address), bigNumberify(e2w('0.5')));
         assert.deepEqual(await this.token1.balanceOf(contributor.address), bigNumberify(e2w('0.45')));
+    });
+
+    it('test request deadline reject', async function () {
+        const [owner, investor, contributor] = await ethers.getSigners();
+
+        await this.token1.connect(owner).transfer(investor.address, e2w('1000'))
+        await this.token0.connect(owner).approve(this.project.address, e2w('1000'))
+        await this.token1.connect(investor).approve(this.project.address, e2w('1000'))
+
+        await this.project.connect(owner).initiate(this.token0.address,
+            this.token1.address, e2w('10'), e2w('0.9'), e2w('0.9'), e2w('0.1'), "first project");
+        await this.project.connect(owner).deposit(this.token0.address, e2w('10'));
+        await this.project.connect(investor).deposit(this.token1.address, e2w('0.9')); // less than 50% voting power
+
+        let create_time = await this.project._create_block()
+
+        await this.project.propose("first proposal", e2w('0.5'), 10000);
+        await this.project.approve_proposal(0, "owner's approval");
+        await this.project.connect(investor).approve_proposal(0, "investor 's approval");
+        await this.project.connect(contributor).request_payment(0, 0, 145, "I have done the work");
+
+        await this.project.connect(investor).approve_payment(0, 0, "investor's approval");
+
+        assert.deepEqual(await this.token0.balanceOf(contributor.address), bigNumberify(e2w('0')));
+        assert.deepEqual(await this.token1.balanceOf(contributor.address), bigNumberify(e2w('0')));
     });
 
 });
