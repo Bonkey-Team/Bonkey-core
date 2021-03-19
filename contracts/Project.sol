@@ -64,12 +64,18 @@ contract Project is IProject {
     uint256 public                          _tot_source_locked;
     uint256 public                          _tot_target_locked;
     string  public                          _project_meta;
+    uint256 public                          _create_block;
     address[] public                        _holder_list;
     mapping (address => StakeHolder) public _stake_holders;
 
     uint256 public                          _num_proposals;
     mapping (uint => Proposal) public       _proposals;
 
+    
+    modifier valid_deadline(uint deadline) {
+        require(deadline > _create_block, "deadline can not be less than now" );    
+        _;
+    }
 
     function getBlockNumber() internal view returns (uint) {
         return block.number;
@@ -100,7 +106,8 @@ contract Project is IProject {
         _project_meta              = project_meta;
         _tot_source_locked         = 0;
         _tot_target_locked         = 0;
-        _min_rate_to_pass_dl       = 1e18/2; // FIXME this number should be more accurate
+        _min_rate_to_pass_dl       = 1e18/2;
+        _create_block              = getBlockNumber();
         emit Init(source_token, target_token,
                   price, min_rate_to_pass_proposal,
                   min_rate_to_pass_request, commission_rate);
@@ -109,7 +116,7 @@ contract Project is IProject {
 
     function deposit(address token,
                      uint256 amount) external {
-        require(_holder_list.length <= 10); // FIXME we limit the size of investors for now, to avoid attack
+        require(_holder_list.length <= 100, 'exceed holder maximum count!'); // FIXME we limit the size of investors for now, to avoid attack
         require(token == _source_token || token == _target_token, "token unrecognized");
         IBEP20(token).transferFrom(msg.sender, address(this), amount);
         StakeHolder storage stake_holder = _stake_holders[msg.sender];
@@ -134,6 +141,9 @@ contract Project is IProject {
     
     function withdraw(uint256 source_amount,
                       uint256 target_amount) external {
+        for(uint i=0; i<_num_proposals; i++) {
+            check_proposal(i); // make sure to check proposals passed deadline 
+        }
         uint256 tot_source_after_withdraw = _tot_source_contribution.sub(source_amount);
         uint256 tot_target_after_withdraw = _tot_target_contribution.sub(target_amount);
         require((tot_source_after_withdraw >= _tot_source_locked && 
@@ -146,6 +156,7 @@ contract Project is IProject {
         require(source_amount <= stake_holder._source_contribution && 
                 target_amount <= stake_holder._target_contribution, 
                 "You don't have enough fund to withdraw");
+
         // check pending proposal
         IBEP20(_source_token).transfer(msg.sender, source_amount);
         IBEP20(_target_token).transfer(msg.sender, target_amount);
@@ -157,9 +168,13 @@ contract Project is IProject {
 
     function propose(string  calldata proposal_meta,
                      uint256 amount_target_token,
-                     uint256 deadline) external {
-        require(msg.sender == _manager, "only manager can propose"); // TODO anyone can propose
-        require(amount_target_token <= _tot_target_contribution);
+                     uint256 deadline) external valid_deadline(deadline) {
+        require(msg.sender == _manager, "Only manager can propose"); // TODO anyone can propose
+        for(uint i=0; i<_num_proposals; i++) {
+            check_proposal(i); // make sure to check proposals passed deadline 
+        }
+        require(amount_target_token <= _tot_target_contribution,
+               'You can not propose more than reserve!');
         Proposal storage proposal = _proposals[_num_proposals];
         proposal._proposal_meta   = proposal_meta;
         proposal._proposed_amount = amount_target_token;
@@ -207,11 +222,15 @@ contract Project is IProject {
 
 
     modifier can_vote_proposal(uint index) {
-        require(index < _num_proposals, "vote for an unexisted proposal");
+        require(index < _num_proposals, 'Can not vote for an unexisted proposal');
+        check_proposal(index);
         Proposal storage proposal = _proposals[index];
-        require(proposal._approved == false && proposal._rejected == false, 'proposal can not be voted anymore');
-        require(proposal._proposal_approvals[msg.sender] == false, 'already accepted by you');
-        require(proposal._proposal_rejections[msg.sender] == false, 'already rejected by you');
+        require(proposal._approved == false && proposal._rejected == false,
+                'proposal can not be voted anymore');
+        require(proposal._proposal_approvals[msg.sender] == false,
+                'already approved by you');
+        require(proposal._proposal_rejections[msg.sender] == false,
+                'already rejected by you');
         _;
     }
 
@@ -238,10 +257,11 @@ contract Project is IProject {
         uint256 tot_tgt_contrib_in_source = target_to_source(_tot_target_contribution);
         uint256 total_voting_power  = _tot_source_contribution.add(tot_tgt_contrib_in_source);
         uint256 tot_rejected_vote_power = proposal._tot_rejected_vote_power;
+        uint256 tot_approved_vote_power = proposal._tot_approved_vote_power;
         if(tot_rejected_vote_power.mul(1e18).div(total_voting_power) > (1e18 - _min_rate_to_pass_proposal)) {
             return true;
         } else if(proposal._deadline < getBlockNumber() && 
-                  tot_rejected_vote_power.mul(1e18).div(total_voting_power) > (1e18 - _min_rate_to_pass_dl)) {
+                  tot_approved_vote_power.mul(1e18).div(total_voting_power) < _min_rate_to_pass_dl) {
             return true;
         }
         return false;
@@ -274,7 +294,7 @@ contract Project is IProject {
 
 
     // this is for deadline purposes
-    function check_proposal(uint index) external returns (bool) {
+    function check_proposal(uint index) internal returns (bool) {
         if(is_proposal_approved(index) == true) {
             make_proposal_approved(index);
             return true;
@@ -308,10 +328,11 @@ contract Project is IProject {
         uint256 tot_tgt_contrib_in_source = target_to_source(_tot_target_contribution);
         uint256 total_voting_power  = _tot_source_contribution.add(tot_tgt_contrib_in_source);
         uint256 tot_rejected_vote_power = request._tot_rejected_vote_power;
+        uint256 tot_approved_vote_power = request._tot_approved_vote_power;
         if(tot_rejected_vote_power.mul(1e18).div(total_voting_power) > (1e18 - _min_rate_to_pass_request)) {
             return true;
         } else if(request._deadline < getBlockNumber() && 
-                  tot_rejected_vote_power.mul(1e18).div(total_voting_power) > (1e18 - _min_rate_to_pass_dl)) {
+                  tot_approved_vote_power.mul(1e18).div(total_voting_power) < _min_rate_to_pass_dl) {
             return true;
         }
         return false;
@@ -369,9 +390,12 @@ contract Project is IProject {
 
 
     modifier can_request_payment(uint index) {
-        require(index < _num_proposals);
+        require(index < _num_proposals,
+                "Proposal does not exist!");
+        check_proposal(index);
         Proposal storage proposal = _proposals[index];
-        require(proposal._approved == true && proposal._released == false);
+        require(proposal._approved == true && proposal._released == false, 
+                "Proposal not approved or already released.");
         _;
     }
 
@@ -379,7 +403,7 @@ contract Project is IProject {
     function request_payment(uint            index,
                              uint            idx,
                              uint256         deadline,
-                             string calldata payment_meta) external can_request_payment(index) {
+                             string calldata payment_meta) external can_request_payment(index) valid_deadline(deadline) {
         PaymentRequest storage request = _proposals[index]._payment_requests[idx];
         request._payment_request_meta = payment_meta;
         request._contributor = msg.sender;
@@ -390,13 +414,14 @@ contract Project is IProject {
 
 
     modifier can_vote_request(uint index, uint idx) {
-        require(index < _num_proposals);
+        require(index < _num_proposals, 'proposal does not exists');
         Proposal storage proposal = _proposals[index];
-        require(proposal._approved == true && proposal._released == false);
+        require(proposal._approved == true && proposal._released == false, 'proposal finalized');
         PaymentRequest storage request = proposal._payment_requests[idx];         
-        require(request._request_approvals[msg.sender] == false);
-        require(request._request_rejections[msg.sender] == false);
-        require(request._approved == false && request._rejected == false);
+        require(request._request_approvals[msg.sender] == false, 'already approved by you');
+        require(request._request_rejections[msg.sender] == false, 'already rejected by you');
+        require(request._approved == false && request._rejected == false, 'request finalized');
+        check_payment(index, idx);
         _;
     }
 
@@ -436,7 +461,7 @@ contract Project is IProject {
 
 
     function check_payment(uint index,
-                           uint idx) external returns(bool) {
+                           uint idx) internal returns(bool) {
         if(is_request_approved(index, idx)) {
             release_proposal(index, idx);
             return true;
