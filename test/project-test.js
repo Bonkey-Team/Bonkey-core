@@ -278,6 +278,10 @@ describe('Project', function () {
         assert.deepEqual(await this.project._tot_source_contribution(), bigNumberify(e2w('15.5')));
         assert.deepEqual(await this.project._tot_target_contribution(), bigNumberify(e2w('1')));
 
+        let holder = await this.project._holder_list(0)
+        let stake_holder = await this.project._stake_holders(holder)
+        assert.deepEqual(stake_holder[0], bigNumberify(e2w('15.5')));
+        assert.deepEqual(stake_holder[1], bigNumberify(e2w('0')));
     });
 
     it('test proposal deadline pass', async function () {
