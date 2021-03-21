@@ -70,6 +70,7 @@ contract Project is IProject {
 
     uint256 public                          _num_proposals;
     mapping (uint => Proposal) public       _proposals;
+    string                                  _version = 'v0.1';
 
     
     modifier valid_deadline(uint deadline) {
@@ -103,7 +104,6 @@ contract Project is IProject {
     }
 
 
-    // core logics
     function initiate(address source_token,
                       address target_token,
                       uint256 price,
@@ -112,6 +112,9 @@ contract Project is IProject {
                       uint256 commission_rate,
                       string  calldata project_meta) external {
         require(_manager == address(0x0), "Project already initiated.");
+        require(min_rate_to_pass_proposal <= 1e18 &&
+                min_rate_to_pass_request <= 1e18 &&
+                commission_rate <= 1e18, 'rate should be <= 1');
         _manager                   = msg.sender;
         _source_token              = source_token;
         _target_token              = target_token;
@@ -132,7 +135,6 @@ contract Project is IProject {
 
     function deposit(address token,
                      uint256 amount) external {
-        require(_holder_list.length <= 100, 'exceed holder maximum count!'); // FIXME we limit the size of investors for now, to avoid attack
         require(token == _source_token || token == _target_token, "token unrecognized");
         IBEP20(token).transferFrom(msg.sender, address(this), amount);
         StakeHolder storage stake_holder = _stake_holders[msg.sender];
@@ -187,7 +189,6 @@ contract Project is IProject {
     function propose(string  calldata proposal_meta,
                      uint256 amount_target_token,
                      uint256 deadline) external valid_deadline(deadline) {
-        require(msg.sender == _manager, "Only manager can propose"); // TODO anyone can propose
         for(uint i=0; i<_num_proposals; i++) {
             check_proposal(i); // make sure to check proposals passed deadline 
         }

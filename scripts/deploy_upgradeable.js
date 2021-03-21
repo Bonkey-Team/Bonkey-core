@@ -2,11 +2,11 @@
 const { ethers, upgrades } = require("hardhat");
 
 async function main() {
-  const CampaignFactory = await ethers.getContractFactory("CampaignFactory");
-  console.log("Deploying CampaignFactory...");
-  const factory = await upgrades.deployProxy(CampaignFactory,  [42], {initializer: 'store'});
+  const BonkeyFactory = await ethers.getContractFactory("BonkeyFactory");
+  console.log("Deploying BonkeyFactory...");
+  const factory = await upgrades.deployProxy(BonkeyFactory);
   await factory.deployed();
-  console.log("CampaignFactory deployed to:", factory.address);
+  console.log("BonkeyFactory deployed to:", factory.address);
 }
 
 main()
