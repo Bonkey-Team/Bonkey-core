@@ -30,7 +30,6 @@ describe('Project', function () {
     }
 
 
-
     it('project can only initiate once', async function () {
         const [owner, other] = await ethers.getSigners();
         await this.project.connect(owner).initiate(this.token0.address,
@@ -89,7 +88,7 @@ describe('Project', function () {
         await this.project.connect(investor).deposit(this.token1.address, e2w('1'));
 
         await this.project.propose("first proposal", e2w('0.5'),
-            100);
+            1000000);
 
         assert.deepEqual(await this.project._num_proposals(), bigNumberify('1'));
 
@@ -299,7 +298,7 @@ describe('Project', function () {
         let create_time = await this.project._create_block()
 
         // lock the fund
-        await this.project.propose("first proposal", e2w('0.5'), 108);
+        await this.project.propose("first proposal", e2w('0.5'), parseInt(create_time)+4);
         await this.project.approve_proposal(0, "owner's approval"); // >= 50%
        
         // withdraw 0.6 would not work 
@@ -313,7 +312,6 @@ describe('Project', function () {
         assert.deepEqual(await this.project._tot_source_contribution(), bigNumberify(e2w('10')));
         assert.deepEqual(await this.project._tot_target_contribution(), bigNumberify(e2w('1')));
     });
-
     it('test proposal deadline reject', async function () {
         const [owner, investor, contributor] = await ethers.getSigners();
 
@@ -329,7 +327,7 @@ describe('Project', function () {
         let create_time = await this.project._create_block()
 
         // lock the fund
-        await this.project.propose("first proposal", e2w('0.5'), 120);
+        await this.project.propose("first proposal", e2w('0.5'), parseInt(create_time)+4);
         await this.project.connect(investor).approve_proposal(0, "investor's approval"); // less than 50%
        
         // withdraw 0.6 would not work 
@@ -355,10 +353,11 @@ describe('Project', function () {
         await this.project.connect(owner).deposit(this.token0.address, e2w('10'));
         await this.project.connect(investor).deposit(this.token1.address, e2w('0.9')); // less than 50% voting power
 
+        let create_time = await this.project._create_block()
         await this.project.propose("first proposal", e2w('0.5'), 10000);
         await this.project.approve_proposal(0, "owner's approval");
         await this.project.connect(investor).approve_proposal(0, "investor 's approval");
-        await this.project.connect(contributor).request_payment(0, 0, 129, "I have done the work");
+        await this.project.connect(contributor).request_payment(0, 0, parseInt(create_time)+4, "I have done the work");
 
         await this.project.connect(owner).approve_payment(0, 0, "owner's approval");
 
@@ -383,7 +382,7 @@ describe('Project', function () {
         await this.project.propose("first proposal", e2w('0.5'), 10000);
         await this.project.approve_proposal(0, "owner's approval");
         await this.project.connect(investor).approve_proposal(0, "investor 's approval");
-        await this.project.connect(contributor).request_payment(0, 0, 145, "I have done the work");
+        await this.project.connect(contributor).request_payment(0, 0, parseInt(create_time)+4, "I have done the work");
 
         await this.project.connect(investor).approve_payment(0, 0, "investor's approval");
 

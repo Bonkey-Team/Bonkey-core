@@ -186,13 +186,24 @@ contract Project is IProject {
     }
 
 
+    modifier can_propose() {
+        uint256 tot_vote_power = get_tot_vote_power();
+        StakeHolder storage stake_holder = _stake_holders[msg.sender];
+        uint256 in_source = target_to_source(stake_holder._target_contribution);
+        uint256 vote_power = stake_holder._source_contribution.add(in_source);
+        uint256 ratio = get_ratio(vote_power, tot_vote_power); 
+        require(ratio > 1e17, 'you are not eligiable to propose'); // larger than 10%
+        _;
+    }
+
+
     function propose(string  calldata proposal_meta,
                      uint256 amount_target_token,
-                     uint256 deadline) external valid_deadline(deadline) {
+                     uint256 deadline) external valid_deadline(deadline) can_propose() {
         for(uint i=0; i<_num_proposals; i++) {
             check_proposal(i); // make sure to check proposals passed deadline 
         }
-        require(amount_target_token < _tot_target_contribution,
+        require(amount_target_token <= _tot_target_contribution,
                'You can not propose more than reserve!');
         Proposal storage proposal = _proposals[_num_proposals];
         proposal._proposal_meta   = proposal_meta;
@@ -218,6 +229,7 @@ contract Project is IProject {
     }
 
 
+    // TODO approved proposal can not be reverted
     function make_proposal_approved(uint index) private {
         Proposal storage proposal = _proposals[index];
         proposal._approved        = true;
