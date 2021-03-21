@@ -14,7 +14,7 @@ contract BonkeyFactory is IBonkeyFactory {
 
     event PairCreated(address indexed token0, address indexed token1, address pair, uint);
 
-    constructor() public {
+    function setFeeToSetter() public {
         feeToSetter = msg.sender;
     }
 
