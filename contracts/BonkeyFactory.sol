@@ -9,7 +9,8 @@ contract BonkeyFactory is IBonkeyFactory {
     address public feeTo;
     address public feeToSetter;
 
-    mapping(address => mapping(address => address)) public getPair;
+    mapping(string => mapping(uint => address)) public getPair; // we allow same pair to exist multiple times
+    mapping(string => uint) public pairNumber;
     address[] public allPairs;
 
     event PairCreated(address indexed token0, address indexed token1, address pair, uint);
@@ -22,6 +23,20 @@ contract BonkeyFactory is IBonkeyFactory {
         return allPairs.length;
     }
 
+    function bytes32ToStr(bytes32 _bytes32) public pure returns (string memory) {
+        bytes memory bytesArray = new bytes(32);
+        for (uint256 i; i < 32; i++) {
+            bytesArray[i] = _bytes32[i];
+        }
+        return string(bytesArray);
+    }
+
+    function getOnePair(address tokenA, address tokenB, uint idx) external view returns (address) {
+        bytes32 salt = keccak256(abi.encodePacked(tokenA, tokenB));
+        string memory converted = bytes32ToStr(salt);
+        return getPair[converted][idx];
+    }
+
     function createProject(address tokenA,
                            address tokenB,
                            uint256 price,
@@ -32,7 +47,6 @@ contract BonkeyFactory is IBonkeyFactory {
         require(tokenA != tokenB, 'BonkeyFactory: IDENTICAL_ADDRESSES');
         require(tokenA != address(0), 'BonkeyFactory: ZERO_ADDRESS');
         require(tokenB != address(0), 'BonkeyFactory: ZERO_ADDRESS');
-        require(getPair[tokenA][tokenB] == address(0), 'BonkeyFactory: PAIR_EXISTS');
         bytes memory bytecode = type(Project).creationCode;
         bytes32 salt = keccak256(abi.encodePacked(tokenA, tokenB));
         assembly {
@@ -40,8 +54,11 @@ contract BonkeyFactory is IBonkeyFactory {
         }
         IProject(pair).initiate(tokenA, tokenB, price, min_rate_to_pass_proposal,
                                   min_rate_to_withdraw, commission_rate, project_meta);
-        getPair[tokenA][tokenB] = pair;
+        string memory converted = bytes32ToStr(salt);
+        uint count = pairNumber[converted];
+        getPair[converted][count] = pair;
         allPairs.push(pair);
+        pairNumber[converted] = pairNumber[converted] + 1;
         emit PairCreated(tokenA, tokenB, pair, allPairs.length);
     }
 

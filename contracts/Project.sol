@@ -16,12 +16,8 @@ contract Project is IProject {
         bool                         _released;
         mapping (address => bool)    _proposal_approvals;
         mapping (address => bool)    _proposal_rejections;
-        mapping (address => uint256) _approved_vote_power;
-        mapping (address => uint256) _rejected_vote_power;
         mapping (address => string)  _approval_meta;
         mapping (address => string)  _reject_meta;
-        uint256                      _tot_approved_vote_power;
-        uint256                      _tot_rejected_vote_power;
         uint256                      _tot_vote_power_at_termination;
         uint256                      _deadline;
 
@@ -41,12 +37,8 @@ contract Project is IProject {
         bool                         _rejected;
         mapping (address => bool)    _request_approvals;
         mapping (address => bool)    _request_rejections;
-        mapping (address => uint256) _approved_vote_power;
-        mapping (address => uint256) _rejected_vote_power;
         mapping (address => string)  _approval_meta;
         mapping (address => string)  _reject_meta;
-        uint256                      _tot_approved_vote_power;
-        uint256                      _tot_rejected_vote_power;
         uint256                      _tot_vote_power_at_termination;
         uint256                      _deadline;
     }
@@ -142,6 +134,7 @@ contract Project is IProject {
         StakeHolder storage stake_holder = _stake_holders[msg.sender];
         if(stake_holder._source_contribution == 0 && stake_holder._target_contribution==0) {
             _holder_list.push(msg.sender); // we allow the same holder to invest multiple times
+            _num_holders = _num_holders.add(1);
         }
         if(token == _source_token) {
             stake_holder._source_contribution = stake_holder._source_contribution.add(amount); 
@@ -207,12 +200,26 @@ contract Project is IProject {
         return true;
     }
 
+    
+    function get_vote_power(mapping (address => bool) storage status_map) internal view returns (uint256) {
+        uint256 vote_power = 0;
+        for(uint i=0; i<_num_holders; i++) {
+            address holder_addr = _holder_list[i];
+            if(status_map[holder_addr] == true) {
+                StakeHolder storage holder = _stake_holders[holder_addr];
+                vote_power = vote_power.add(holder._source_contribution);
+                vote_power = vote_power.add(mul_ratio(holder._target_contribution, _price));
+            }
+        }
+        return vote_power;
+    }
+
 
     function is_proposal_approved(uint index) private view returns(bool) {
         // copmute total voting power
         Proposal storage proposal   = _proposals[index];
         uint256 total_voting_power  = get_tot_vote_power();
-        uint256 tot_approved_vote_power = proposal._tot_approved_vote_power;
+        uint256 tot_approved_vote_power = get_vote_power(proposal._proposal_approvals);
         if(get_ratio(tot_approved_vote_power, total_voting_power) >= _min_rate_to_pass_proposal) {
             return true;
         } else if (proposal._deadline < getBlockNumber() && 
@@ -236,15 +243,6 @@ contract Project is IProject {
     }
 
 
-    function get_vote_power(address approver) private view returns(uint256) {
-        StakeHolder storage stake_holder = _stake_holders[approver];
-        uint256 vote_power = stake_holder._source_contribution; 
-        uint256 tgt_contrib_in_source = target_to_source(stake_holder._target_contribution);
-        vote_power = vote_power.add(tgt_contrib_in_source);
-        return vote_power;
-    }
-
-
     modifier can_vote_proposal(uint index) {
         require(index < _num_proposals, 'Can not vote for an unexisted proposal');
         check_proposal(index);
@@ -264,9 +262,6 @@ contract Project is IProject {
         Proposal storage proposal = _proposals[index];
         proposal._proposal_approvals[msg.sender]  = true;
         proposal._approval_meta[msg.sender]       = approval_meta;
-        uint256 vote_power                        = get_vote_power(msg.sender);
-        proposal._approved_vote_power[msg.sender] = vote_power;
-        proposal._tot_approved_vote_power         = proposal._tot_approved_vote_power.add(vote_power); 
 
         if(is_proposal_approved(index) == true) {
             make_proposal_approved(index);
@@ -280,8 +275,8 @@ contract Project is IProject {
         // copmute total voting power
         Proposal storage proposal   = _proposals[index];
         uint256 total_voting_power  = get_tot_vote_power(); 
-        uint256 tot_rejected_vote_power = proposal._tot_rejected_vote_power;
-        uint256 tot_approved_vote_power = proposal._tot_approved_vote_power;
+        uint256 tot_rejected_vote_power = get_vote_power(proposal._proposal_rejections);
+        uint256 tot_approved_vote_power = get_vote_power(proposal._proposal_approvals); 
         if(get_ratio(tot_rejected_vote_power, total_voting_power) > (1e18 - _min_rate_to_pass_proposal)) {
             return true;
         } else if(proposal._deadline < getBlockNumber() && 
@@ -306,9 +301,6 @@ contract Project is IProject {
         Proposal storage proposal = _proposals[index];
         proposal._proposal_rejections[msg.sender] = true;
         proposal._reject_meta[msg.sender]         = reject_meta;
-        uint256 vote_power                        = get_vote_power(msg.sender);
-        proposal._rejected_vote_power[msg.sender] = vote_power;
-        proposal._tot_rejected_vote_power         = proposal._tot_rejected_vote_power.add(vote_power); 
 
         if(is_proposal_rejected(index) == true) {
             make_proposal_rejected(index);
@@ -336,7 +328,7 @@ contract Project is IProject {
         // copmute total voting power
         PaymentRequest storage request = _proposals[index]._payment_requests[idx];
         uint256 total_voting_power  = get_tot_vote_power(); 
-        uint256 tot_approved_vote_power = request._tot_approved_vote_power;
+        uint256 tot_approved_vote_power = get_vote_power(request._request_approvals);
         if(get_ratio(tot_approved_vote_power, total_voting_power) >= _min_rate_to_pass_request) {
             return true;
         } else if(request._deadline < getBlockNumber() &&
@@ -351,8 +343,8 @@ contract Project is IProject {
         // copmute total voting power
         PaymentRequest storage request = _proposals[index]._payment_requests[idx];
         uint256 total_voting_power  = get_tot_vote_power(); 
-        uint256 tot_rejected_vote_power = request._tot_rejected_vote_power;
-        uint256 tot_approved_vote_power = request._tot_approved_vote_power;
+        uint256 tot_rejected_vote_power = get_vote_power(request._request_rejections);
+        uint256 tot_approved_vote_power = get_vote_power(request._request_approvals);
         if(get_ratio(tot_rejected_vote_power, total_voting_power) > (1e18 - _min_rate_to_pass_request)) {
             return true;
         } else if(request._deadline < getBlockNumber() && 
@@ -433,7 +425,8 @@ contract Project is IProject {
         request._contributor = msg.sender;
         request._deadline = deadline;
         emit RequestPayment(index, idx);
-        idx = idx + 1;
+        Proposal storage proposal = _proposals[index];
+        proposal._num_payment_requests = proposal._num_payment_requests.add(1);
         return true;
     }
 
@@ -456,9 +449,6 @@ contract Project is IProject {
         PaymentRequest storage request = _proposals[index]._payment_requests[idx];
         request._request_approvals[msg.sender]   = true;
         request._approval_meta[msg.sender]       = approval_meta;
-        uint256 vote_power                       = get_vote_power(msg.sender);
-        request._approved_vote_power[msg.sender] = vote_power;
-        request._tot_approved_vote_power         = request._tot_approved_vote_power.add(vote_power); 
 
         if(is_request_approved(index, idx) == true) {
             release_proposal(index, idx);
@@ -474,9 +464,6 @@ contract Project is IProject {
         PaymentRequest storage request = _proposals[index]._payment_requests[idx];
         request._request_rejections[msg.sender]  = true;
         request._reject_meta[msg.sender]         = reject_meta;
-        uint256 vote_power                       = get_vote_power(msg.sender);
-        request._rejected_vote_power[msg.sender] = vote_power;
-        request._tot_rejected_vote_power         = request._tot_rejected_vote_power.add(vote_power); 
 
         if(is_request_rejected(index, idx) == true) {
             reject_request(index, idx);
@@ -488,10 +475,9 @@ contract Project is IProject {
 
     function get_proposal_voter_info(uint index,
                                address voter) external view
-                            returns (bool, bool, uint256, uint256, string memory, string memory) {
+                            returns (bool, bool, string memory, string memory) {
         Proposal storage proposal = _proposals[index]; 
         return (proposal._proposal_approvals[voter], proposal._proposal_rejections[voter],
-                proposal._approved_vote_power[voter], proposal._rejected_vote_power[voter],
                 proposal._approval_meta[voter], proposal._reject_meta[voter]);
     }
 
@@ -499,20 +485,19 @@ contract Project is IProject {
     function get_request_voter_info(uint index,
                                     uint idx,
                                     address voter) external view
-                            returns (bool, bool, uint256, uint256, string memory, string memory) {
+                            returns (bool, bool, string memory, string memory) {
         PaymentRequest storage request = _proposals[index]._payment_requests[idx]; 
         return (request._request_approvals[voter], request._request_rejections[voter],
-                request._approved_vote_power[voter], request._rejected_vote_power[voter],
                 request._approval_meta[voter], request._reject_meta[voter]);
     }
 
 
     function get_request_info(uint index,
                               uint idx) external view
-                            returns (address, string memory, bool, bool, uint256, uint256, uint256) {
+                            returns (address, string memory, bool, bool, uint256) {
         PaymentRequest storage request = _proposals[index]._payment_requests[idx]; 
         return (request._contributor, request._payment_request_meta, request._approved,
-                request._rejected, request._tot_approved_vote_power, request._tot_rejected_vote_power,
+                request._rejected,
                 request._tot_vote_power_at_termination);
     }
 }

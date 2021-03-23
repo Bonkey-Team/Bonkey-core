@@ -46,8 +46,15 @@ secret.json will be like:
 ```
 
 Upgradable deployment:
+
 ```
 npx hardhat run --network <mainnet | rinkeby | bsc_test> scripts/deploy_upgradeable.js
+```
+
+Upgrade the contract:
+
+```
+npx hardhat run --network <mainnet | rinkeby | bsc_test> scripts/upgrade.js
 ```
 
 ## Run unit tests
