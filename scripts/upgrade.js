@@ -2,10 +2,10 @@
 const { ethers, upgrades } = require("hardhat");
 
 async function main() {
-  const CampaignFactory = await ethers.getContractFactory("CampaignFactory");
-  console.log("Upgrading CampaignFactory...");
-  const factory = await upgrades.upgradeProxy("0x9Bf79cA6d43A25b7b452908064A2d577d214431f", CampaignFactory);
-  console.log("CampaignFactory upgraded");
+  const BonkeyFactory = await ethers.getContractFactory("BonkeyFactory");
+  console.log("Upgrading BonkeyFactory...");
+  const factory = await upgrades.upgradeProxy("0xeBA1566506Fa63466E3028CFF33000D3f8B4BDe0", BonkeyFactory);
+  console.log("BonkeyFactory upgraded");
 }
 
 main()
