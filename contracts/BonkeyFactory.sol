@@ -48,14 +48,15 @@ contract BonkeyFactory is IBonkeyFactory {
         require(tokenA != address(0), 'BonkeyFactory: ZERO_ADDRESS');
         require(tokenB != address(0), 'BonkeyFactory: ZERO_ADDRESS');
         bytes memory bytecode = type(Project).creationCode;
-        bytes32 salt = keccak256(abi.encodePacked(tokenA, tokenB));
+        bytes32 salt0 = keccak256(abi.encodePacked(tokenA, tokenB));
+        string memory converted = bytes32ToStr(salt0);
+        uint count = pairNumber[converted];
+        bytes32 salt1 = keccak256(abi.encodePacked(tokenA, tokenB, count));
         assembly {
-            pair := create2(0, add(bytecode, 32), mload(bytecode), salt)
+            pair := create2(0, add(bytecode, 32), mload(bytecode), salt1)
         }
         IProject(pair).initiate(tokenA, tokenB, price, min_rate_to_pass_proposal,
                                   min_rate_to_withdraw, commission_rate, project_meta);
-        string memory converted = bytes32ToStr(salt);
-        uint count = pairNumber[converted];
         getPair[converted][count] = pair;
         allPairs.push(pair);
         pairNumber[converted] = pairNumber[converted] + 1;

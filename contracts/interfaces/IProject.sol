@@ -45,7 +45,6 @@ interface IProject {
     event RequestPayment(uint index,
                          uint idx);
     function request_payment(uint            index,
-                             uint            idx,
                              uint256         deadline,
                              string calldata payment_meta) external returns(bool);
 

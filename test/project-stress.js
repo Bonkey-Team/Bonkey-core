@@ -51,7 +51,7 @@ describe('Project', function () {
         expect(prop[3]).to.equal(false);
         expect(prop[4]).to.equal(false);
 
-        await this.project.connect(michael).request_payment(0, 0, 10000000, "I am michael");
+        await this.project.connect(michael).request_payment(0, 10000000, "I am michael");
         await this.project.connect(owner).approve_payment(0, 0, "owner's approval");
 
         assert.deepEqual(await this.token0.balanceOf(michael.address), bigNumberify(e2w('20000000')));
@@ -68,7 +68,7 @@ describe('Project', function () {
         expect(prop[3]).to.equal(false);
         expect(prop[4]).to.equal(false);
 
-        await this.project.connect(jackie).request_payment(1, 0, 10000000, "I am michael");
+        await this.project.connect(jackie).request_payment(1, 10000000, "I am michael");
         await this.project.connect(owner).approve_payment(1, 0, "owner's approval");
 
         assert.deepEqual(await this.token0.balanceOf(jackie.address), bigNumberify(e2w('1000000')));
@@ -115,12 +115,12 @@ describe('Project', function () {
             await this.project.connect(accounts[i]).approve_proposal(1, 'approval');
         }
 
-        await this.project.connect(accounts[0]).request_payment(0, 0, 10000000, "get fund");
+        await this.project.connect(accounts[0]).request_payment(0, 10000000, "get fund");
         for (let i=0; i<18; i++) {
             await this.project.connect(accounts[i]).approve_payment(0, 0, "payment approval");
         }
 
-        await this.project.connect(accounts[0]).request_payment(1, 0, 10000000, "get fund");
+        await this.project.connect(accounts[0]).request_payment(1, 10000000, "get fund");
         for (let i=0; i<18; i++) {
             await this.project.connect(accounts[i]).approve_payment(1, 0, "payment approval");
         }
