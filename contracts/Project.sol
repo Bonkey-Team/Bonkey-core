@@ -253,6 +253,10 @@ contract Project is IProject {
                 'already approved by you');
         require(proposal._proposal_rejections[msg.sender] == false,
                 'already rejected by you');
+        // FIXME
+        StakeHolder storage holder = _stake_holders[msg.sender];
+        require(holder._source_contribution > 0 || holder._target_contribution > 0,
+                'you are not stakeholders');
         _;
     }
 
@@ -417,15 +421,16 @@ contract Project is IProject {
 
 
     function request_payment(uint            index,
-                             uint            idx,
                              uint256         deadline,
                              string calldata payment_meta) external can_request_payment(index) valid_deadline(deadline) returns (bool) {
+        Proposal storage proposal = _proposals[index];
+        uint idx = proposal._num_payment_requests;
         PaymentRequest storage request = _proposals[index]._payment_requests[idx];
+        require(request._contributor != msg.sender, 'you have already requested fund');
         request._payment_request_meta = payment_meta;
         request._contributor = msg.sender;
         request._deadline = deadline;
         emit RequestPayment(index, idx);
-        Proposal storage proposal = _proposals[index];
         proposal._num_payment_requests = proposal._num_payment_requests.add(1);
         return true;
     }

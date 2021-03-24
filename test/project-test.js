@@ -174,7 +174,7 @@ describe('Project', function () {
         await this.project.propose("first proposal", e2w('0.5'), 10000);
         await this.project.approve_proposal(0, "owner's approval");
         await this.project.connect(investor).approve_proposal(0, "investor 's approval");
-        await this.project.connect(contributor).request_payment(0, 0, 10000, "I have done the work");
+        await this.project.connect(contributor).request_payment(0, 10000, "I have done the work");
 
         await this.project.connect(owner).approve_payment(0, 0, "owner's approval");
         await this.project.connect(investor).approve_payment(0, 0, "investor 's approval");
@@ -218,7 +218,7 @@ describe('Project', function () {
         await this.project.propose("first proposal", e2w('0.5'), 100000);
         await this.project.approve_proposal(0, "owner's approval");
         await this.project.connect(investor).approve_proposal(0, "investor 's approval");
-        await this.project.connect(contributor).request_payment(0, 0, 1000, "I have done the work");
+        await this.project.connect(contributor).request_payment(0, 1000, "I have done the work");
 
         await this.project.connect(owner).reject_payment(0, 0, "owner's rejection");
 
@@ -357,7 +357,7 @@ describe('Project', function () {
         await this.project.propose("first proposal", e2w('0.5'), 10000);
         await this.project.approve_proposal(0, "owner's approval");
         await this.project.connect(investor).approve_proposal(0, "investor 's approval");
-        await this.project.connect(contributor).request_payment(0, 0, parseInt(create_time)+4, "I have done the work");
+        await this.project.connect(contributor).request_payment(0, parseInt(create_time)+4, "I have done the work");
 
         await this.project.connect(owner).approve_payment(0, 0, "owner's approval");
 
@@ -382,7 +382,7 @@ describe('Project', function () {
         await this.project.propose("first proposal", e2w('0.5'), 10000);
         await this.project.approve_proposal(0, "owner's approval");
         await this.project.connect(investor).approve_proposal(0, "investor 's approval");
-        await this.project.connect(contributor).request_payment(0, 0, parseInt(create_time)+4, "I have done the work");
+        await this.project.connect(contributor).request_payment(0, parseInt(create_time)+4, "I have done the work");
 
         await this.project.connect(investor).approve_payment(0, 0, "investor's approval");
 
