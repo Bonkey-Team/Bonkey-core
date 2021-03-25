@@ -63,7 +63,7 @@ contract Project is IProject {
 
     uint256 public                          _num_proposals;
     mapping (uint => Proposal) public       _proposals;
-    string                                  _version = 'v0.1';
+    string  public                          _version = 'v0.1.1';
 
     
     modifier valid_deadline(uint deadline) {
@@ -137,8 +137,17 @@ contract Project is IProject {
             _num_holders = _num_holders.add(1);
         }
         if(token == _source_token) {
+            uint256 tot_tgt_in_source = target_to_source(_tot_target_contribution);
             stake_holder._source_contribution = stake_holder._source_contribution.add(amount); 
             _tot_source_contribution          = _tot_source_contribution.add(amount);
+            if(tot_tgt_in_source != 0) { // avoid attack
+                require(get_ratio(_tot_source_contribution, 
+                                  _tot_source_contribution.add(tot_tgt_in_source)) < _min_rate_to_pass_proposal,
+                                  'you can not break vote balance');
+                require(get_ratio(_tot_source_contribution, 
+                                  _tot_source_contribution.add(tot_tgt_in_source)) < _min_rate_to_pass_request,
+                                  'you can not break vote balance');
+            }
             
         } else {
             uint256 amount_in_source = target_to_source(amount);

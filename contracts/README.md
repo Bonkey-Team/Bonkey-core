@@ -12,6 +12,7 @@
 * BNKY testnet = 0x058a38a4836ddc10deda93d2b49ce0244bd9c856
 * DNKY testnet = 0x8e9cee01050cf9621012e0ea6c287a4f84b6d695 
 * Bonkey factory = 0xA1759BF2E3a537449d194eaff5B266BF2d22234e 
+* Airdrop = 0xe266db2b8cc9ab4264aad8e98580e4a7b0631dae
 
 ## Others
 * pancakeswap router = 0x05fF2B0DB69458A0750badebc4f9e13aDd608C7F
