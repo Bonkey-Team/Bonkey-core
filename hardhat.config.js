@@ -26,6 +26,10 @@ module.exports = {
             url: `https://rinkeby.infura.io/v3/${projectId}`,
             accounts: {mnemonic: mnemonic}
         },
+        bsc: {
+            url: 'https://bsc-dataseed.binance.org',
+            accounts: {mnemonic: mnemonic}
+        },
         bsc_test: {
             url: 'https://data-seed-prebsc-1-s1.binance.org:8545',
             accounts: {mnemonic: mnemonic}

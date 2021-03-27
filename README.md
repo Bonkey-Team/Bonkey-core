@@ -30,9 +30,9 @@ truffle-flattener contracts/Project.sol > Project_flatten.sol
 
 ```
 # deploy BEP20 token contract
-npx hardhat run --network <localhost mainnet | rinkeby | bsc_test> scripts/deploy_bep20.js
+npx hardhat run --network <localhost mainnet | rinkeby | bsc | bsc_test> scripts/deploy_bep20.js
 # deploy a project contract
-npx hardhat run --network <localhost mainnet | rinkeby | bsc_test> scripts/deploy.js
+npx hardhat run --network <localhost mainnet | rinkeby | bsc | bsc_test> scripts/deploy.js
 ```
 
 secret.json will be like:
@@ -48,13 +48,13 @@ secret.json will be like:
 Upgradable deployment:
 
 ```
-npx hardhat run --network <mainnet | rinkeby | bsc_test> scripts/deploy_upgradeable.js
+npx hardhat run --network <mainnet | rinkeby | bsc | bsc_test> scripts/deploy_upgradeable.js
 ```
 
 Upgrade the contract:
 
 ```
-npx hardhat run --network <mainnet | rinkeby | bsc_test> scripts/upgrade.js
+npx hardhat run --network <mainnet | rinkeby | bsc | bsc_test> scripts/upgrade.js
 ```
 
 ## Run unit tests
