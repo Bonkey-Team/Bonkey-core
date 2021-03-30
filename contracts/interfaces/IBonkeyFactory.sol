@@ -1,4 +1,5 @@
-pragma solidity >=0.5.0;
+// SPDX-License-Identifier: MIT
+pragma solidity >=0.8.0;
 
 interface IBonkeyFactory {
     event ProjectCreated(address indexed token0, address indexed token1, address project, uint);

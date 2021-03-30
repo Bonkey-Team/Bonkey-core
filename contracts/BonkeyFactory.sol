@@ -1,4 +1,5 @@
-pragma solidity =0.5.16;
+// SPDX-License-Identifier: MIT
+pragma solidity =0.8.0;
 
 import './interfaces/IBonkeyFactory.sol';
 import './Project.sol';
@@ -43,7 +44,7 @@ contract BonkeyFactory is IBonkeyFactory {
                            uint256 min_rate_to_pass_proposal,
                            uint256 min_rate_to_withdraw,
                            uint256 commission_rate,
-                           string  calldata project_meta) external returns (address pair) {
+                           string  calldata project_meta) external override returns (address pair) {
         require(tokenA != tokenB, 'BonkeyFactory: IDENTICAL_ADDRESSES');
         require(tokenA != address(0), 'BonkeyFactory: ZERO_ADDRESS');
         require(tokenB != address(0), 'BonkeyFactory: ZERO_ADDRESS');
@@ -63,12 +64,12 @@ contract BonkeyFactory is IBonkeyFactory {
         emit PairCreated(tokenA, tokenB, pair, allPairs.length);
     }
 
-    function setFeeTo(address _feeTo) external {
+    function setFeeTo(address _feeTo) external override {
         require(msg.sender == feeToSetter, 'BonkeyFactory: FORBIDDEN');
         feeTo = _feeTo;
     }
 
-    function setFeeToSetter(address _feeToSetter) external {
+    function setFeeToSetter(address _feeToSetter) external override {
         require(msg.sender == feeToSetter, 'BonkeyFactory: FORBIDDEN');
         feeToSetter = _feeToSetter;
     }
