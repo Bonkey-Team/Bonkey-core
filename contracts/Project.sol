@@ -1,4 +1,5 @@
-pragma solidity =0.5.16;
+// SPDX-License-Identifier: MIT
+pragma solidity =0.8.0;
 
 import './interfaces/IBEP20.sol';
 import './interfaces/IProject.sol';
@@ -103,7 +104,7 @@ contract Project is IProject {
                       uint256 min_rate_to_pass_proposal,
                       uint256 min_rate_to_pass_request,
                       uint256 commission_rate,
-                      string  calldata project_meta) external returns(bool) {
+                      string  calldata project_meta) external override returns(bool) {
         require(_manager == address(0x0), "Project already initiated.");
         require(min_rate_to_pass_proposal <= 1e18 &&
                 min_rate_to_pass_request <= 1e18 &&
@@ -128,7 +129,7 @@ contract Project is IProject {
 
 
     function deposit(address token,
-                     uint256 amount) external returns (bool) {
+                     uint256 amount) external override returns (bool) {
         require(token == _source_token || token == _target_token, "token unrecognized");
         IBEP20(token).transferFrom(msg.sender, address(this), amount);
         StakeHolder storage stake_holder = _stake_holders[msg.sender];
@@ -163,7 +164,7 @@ contract Project is IProject {
 
     
     function withdraw(uint256 source_amount,
-                      uint256 target_amount) external returns (bool) {
+                      uint256 target_amount) external override returns (bool) {
         for(uint i=0; i<_num_proposals; i++) {
             check_proposal(i); // make sure to check proposals passed deadline 
         }
@@ -194,7 +195,7 @@ contract Project is IProject {
 
     function propose(string  calldata proposal_meta,
                      uint256 amount_target_token,
-                     uint256 deadline) external valid_deadline(deadline) returns (bool) {
+                     uint256 deadline) external override valid_deadline(deadline) returns (bool) {
         for(uint i=0; i<_num_proposals; i++) {
             check_proposal(i); // make sure to check proposals passed deadline 
         }
@@ -271,7 +272,7 @@ contract Project is IProject {
 
 
     function approve_proposal(uint256          index,
-                              string  calldata approval_meta) external can_vote_proposal(index) returns (bool) {
+                              string  calldata approval_meta) external override can_vote_proposal(index) returns (bool) {
         Proposal storage proposal = _proposals[index];
         proposal._proposal_approvals[msg.sender]  = true;
         proposal._approval_meta[msg.sender]       = approval_meta;
@@ -310,7 +311,7 @@ contract Project is IProject {
 
 
     function reject_proposal(uint            index,
-                             string calldata reject_meta) external can_vote_proposal(index) returns (bool) {
+                             string calldata reject_meta) external override can_vote_proposal(index) returns (bool) {
         Proposal storage proposal = _proposals[index];
         proposal._proposal_rejections[msg.sender] = true;
         proposal._reject_meta[msg.sender]         = reject_meta;
@@ -431,7 +432,7 @@ contract Project is IProject {
 
     function request_payment(uint            index,
                              uint256         deadline,
-                             string calldata payment_meta) external can_request_payment(index) valid_deadline(deadline) returns (bool) {
+                             string calldata payment_meta) external override can_request_payment(index) valid_deadline(deadline) returns (bool) {
         Proposal storage proposal = _proposals[index];
         uint idx = proposal._num_payment_requests;
         PaymentRequest storage request = _proposals[index]._payment_requests[idx];
@@ -459,7 +460,7 @@ contract Project is IProject {
 
     function approve_payment(uint            index,
                              uint            idx,
-                             string calldata approval_meta) external can_vote_request(index, idx) returns (bool) {
+                             string calldata approval_meta) external override can_vote_request(index, idx) returns (bool) {
         PaymentRequest storage request = _proposals[index]._payment_requests[idx];
         request._request_approvals[msg.sender]   = true;
         request._approval_meta[msg.sender]       = approval_meta;
@@ -474,7 +475,7 @@ contract Project is IProject {
 
     function reject_payment(uint            index,
                             uint            idx,
-                            string calldata reject_meta) external can_vote_request(index, idx) returns (bool) {
+                            string calldata reject_meta) external override can_vote_request(index, idx) returns (bool) {
         PaymentRequest storage request = _proposals[index]._payment_requests[idx];
         request._request_rejections[msg.sender]  = true;
         request._reject_meta[msg.sender]         = reject_meta;
@@ -488,7 +489,7 @@ contract Project is IProject {
 
 
     function get_proposal_voter_info(uint index,
-                               address voter) external view
+                               address voter) external override view
                             returns (bool, bool, string memory, string memory) {
         Proposal storage proposal = _proposals[index]; 
         return (proposal._proposal_approvals[voter], proposal._proposal_rejections[voter],
@@ -498,7 +499,7 @@ contract Project is IProject {
 
     function get_request_voter_info(uint index,
                                     uint idx,
-                                    address voter) external view
+                                    address voter) external override view
                             returns (bool, bool, string memory, string memory) {
         PaymentRequest storage request = _proposals[index]._payment_requests[idx]; 
         return (request._request_approvals[voter], request._request_rejections[voter],
@@ -507,7 +508,7 @@ contract Project is IProject {
 
 
     function get_request_info(uint index,
-                              uint idx) external view
+                              uint idx) external override view
                             returns (address, string memory, bool, bool, uint256) {
         PaymentRequest storage request = _proposals[index]._payment_requests[idx]; 
         return (request._contributor, request._payment_request_meta, request._approved,

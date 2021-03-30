@@ -1,7 +1,8 @@
-pragma solidity ^0.5.0;
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
 
 library TestLibrary1 {
-    function libDo(uint256 n) internal returns (uint256) {
+    function libDo(uint256 n) internal pure returns (uint256) {
         return n * 2;
     }
 }
@@ -63,14 +64,14 @@ contract TestContractLib1 {
     using TestLibrary1 for uint256;
     using SafeMath1 for uint256;
 
-    function printNumber(uint256 amount) public returns (uint256) {
+    function printNumber(uint256 amount) public pure returns (uint256) {
         uint result = amount.libDo();
         uint sub = amount.sub(1);
         uint add = amount.add(1);
         uint div = amount.div(1);
         uint mod = amount.mod(1);
         uint mul = amount.mul(1);
-        return result;
+        return result.add(sub).add(add).add(div).add(mod).add(mul);
     }
 }
 
