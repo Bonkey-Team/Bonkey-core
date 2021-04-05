@@ -2,10 +2,10 @@
 pragma solidity =0.8.0;
 
 import './interfaces/INFTFactory.sol';
-import './NFTMetadata.sol';
+import './NFTTokenized.sol';
 
 contract NFTFactory is INFTFactory {
-    bytes32 public constant INIT_CODE_PAIR_HASH = keccak256(abi.encodePacked(type(NFTokenMetadata).creationCode));
+    bytes32 public constant INIT_CODE_PAIR_HASH = keccak256(abi.encodePacked(type(NFTokenTokenized).creationCode));
 
     mapping(string => mapping(uint => address)) public getNFT; // we allow same pair to exist multiple times
     mapping(string => uint) public nftNumber;
@@ -14,6 +14,10 @@ contract NFTFactory is INFTFactory {
 
     function allNFTsLength() external view returns (uint) {
         return allNFTs.length;
+    }
+
+    function get_NFT(uint256 index) external view override returns (address) {
+        return allNFTs[index];
     }
 
 
@@ -26,18 +30,21 @@ contract NFTFactory is INFTFactory {
     }
 
 
-    function createNFT(string calldata nftName,
-                       string calldata nftSymbol) external override returns (address nft)
+    function createNFT(string calldata meta,
+                       address tgt_token,
+                       uint256 unit_size,
+                       uint256 max_n_units) external override returns (address nft)
     {
-        bytes memory bytecode = type(NFTokenMetadata).creationCode;
-        bytes32 salt0 = keccak256(abi.encodePacked(nftName, nftSymbol));
+        bytes memory bytecode = type(NFTokenTokenized).creationCode;
+        bytes32 salt0 = keccak256(abi.encodePacked(meta));
         string memory converted = bytes32ToStr(salt0);
         uint count = nftNumber[converted];
-        bytes32 salt1 = keccak256(abi.encodePacked(nftName, nftSymbol, count));
+        bytes32 salt1 = keccak256(abi.encodePacked(meta, count));
         assembly {
             nft := create2(0, add(bytecode, 32), mload(bytecode), salt1)
         }
-        ERC721Metadata(nft).set_manager(msg.sender);
+        NFTokenTokenized(nft).initialize(meta, tgt_token, unit_size, max_n_units);
+        NFTokenTokenized(nft).set_manager(msg.sender);
         getNFT[converted][count] = nft;
         allNFTs.push(nft);
         nftNumber[converted] = nftNumber[converted] + 1;

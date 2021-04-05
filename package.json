@@ -19,11 +19,13 @@
   "dependencies": {
     "@openzeppelin/cli": "^2.8.2",
     "@truffle/hdwallet-provider": "^1.0.40",
+    "cids": "^1.1.6",
     "date-fns": "^2.11.1",
     "ethereumjs-wallet": "^0.6.5",
     "fs-extra": "^5.0.0",
     "ganache-cli": "^6.9.1",
     "gray-matter": "^4.0.2",
+    "ipfs-core": "^0.5.4",
     "json": "^10.0.0",
     "mocha": "^7.1.1",
     "next": "^10.0.0",
