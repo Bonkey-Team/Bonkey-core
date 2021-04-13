@@ -148,4 +148,17 @@ library SafeMath {
         require(b != 0, errorMessage);
         return a % b;
     }
+
+    function get_ratio(uint256 a, uint256 b) internal pure returns (uint256) {
+        uint256 tmp = mul(a, 1e18);
+        tmp = div(tmp, b);
+        return tmp;
+    }
+
+
+    function mul_ratio(uint256 a, uint256 ratio) internal pure returns (uint256) {
+        uint256 tmp = mul(a, ratio);
+        tmp = div(tmp, 1e18);
+        return tmp;
+    }
 }
