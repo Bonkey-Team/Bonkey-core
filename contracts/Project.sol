@@ -327,6 +327,7 @@ contract Project is IProject {
     // this is for deadline purposes
     function check_proposal(uint index) internal returns (bool) {
         // TODO reduce the redundant computation here
+        // FIXME gas optimization
         if(is_proposal_approved(index) == true) {
             make_proposal_approved(index);
             return true;
