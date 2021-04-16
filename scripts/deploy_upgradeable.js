@@ -1,12 +1,14 @@
-// scripts/deploy_upgradeable_factory.js
+// scripts/deploy_bep20.js
 const { ethers, upgrades } = require("hardhat");
 
 async function main() {
-  const BonkeyFactory = await ethers.getContractFactory("BonkeyFactory");
-  console.log("Deploying BonkeyFactory...");
-  const factory = await upgrades.deployProxy(BonkeyFactory);
-  await factory.deployed();
-  console.log("BonkeyFactory deployed to:", factory.address);
+  const contractName = 'BonkeyToken';
+  // We get the contract to deploy
+  const contract = await ethers.getContractFactory(contractName);
+  console.log("Deploying" + contractName + "...");
+  const contractInstance = await upgrades.deployProxy(contract);
+  await contractInstance.deployed();
+  console.log(contractName + "deployed to:", contractInstance.address);
 }
 
 main()
@@ -14,4 +16,4 @@ main()
   .catch(error => {
     console.error(error);
     process.exit(1);
-  });
+});

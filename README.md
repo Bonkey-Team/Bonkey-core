@@ -28,13 +28,6 @@ truffle-flattener contracts/Project.sol > Project_flatten.sol
 
 ## How to deploy / upgrade
 
-```
-# deploy BEP20 token contract
-npx hardhat run --network <localhost mainnet | rinkeby | bsc | bsc_test> scripts/deploy_bep20.js
-# deploy a project contract
-npx hardhat run --network <localhost mainnet | rinkeby | bsc | bsc_test> scripts/deploy.js
-```
-
 secret.json will be like:
 
 ```
@@ -46,6 +39,8 @@ secret.json will be like:
 ```
 
 Upgradable deployment:
+
+Firstly, in deploy\_upgradeable.js, change `contractName` to the name of the contract, then:
 
 ```
 npx hardhat run --network <mainnet | rinkeby | bsc | bsc_test> scripts/deploy_upgradeable.js
