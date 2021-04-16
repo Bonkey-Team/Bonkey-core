@@ -2,8 +2,11 @@
 pragma solidity 0.8.0;
 
 import './BEP20.sol';
+import './libraries/Address.sol';
 
 contract BonkeyToken is BEP20 {
+
+    using Address for address;
 
     mapping (address => address) internal _delegates;
 
@@ -27,7 +30,8 @@ contract BonkeyToken is BEP20 {
         address[] calldata whiteList
     ) external onlyOwner {
         for(uint i=0; i<whiteList.length; i++) {
-            if(doneSnapshot[whiteList[i]] == false) {
+            if(doneSnapshot[whiteList[i]] == false && !address(whiteList[i]).isContract()) {
+                doneSnapshot[whiteList[i]] = true;
                 uint balance = _oldBnky.balanceOf(whiteList[i]);
                 _mint(whiteList[i], balance);
             }
