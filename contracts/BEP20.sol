@@ -14,14 +14,14 @@ contract BEP20 is Context, IBEP20, Ownable {
 
     mapping(address => mapping(address => uint256)) private _allowances;
 
-    uint256 private _totalSupply;
+    uint256 internal _totalSupply;
 
-    string private _name;
-    string private _symbol;
-    uint8 private _decimals;
+    string internal _name;
+    string internal _symbol;
+    uint8 internal _decimals;
 
     function initialize(
-    ) public initializer {
+    ) public virtual initializer {
         _name = "Bonkey dAPP";
         _symbol = "BNKY";
         _decimals = 18;

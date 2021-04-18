@@ -2,10 +2,13 @@
 const { ethers, upgrades } = require("hardhat");
 
 async function main() {
-  const BonkeyFactory = await ethers.getContractFactory("BonkeyFactory");
-  console.log("Upgrading BonkeyFactory...");
-  const factory = await upgrades.upgradeProxy("0xeBA1566506Fa63466E3028CFF33000D3f8B4BDe0", BonkeyFactory);
-  console.log("BonkeyFactory upgraded");
+  const contractName = 'MasterChef';
+  const contractAddr = '0x12d86af861Bb2C8465548d3e2db2FED042770cAD';
+  // We get the contract to deploy
+  const contract = await ethers.getContractFactory(contractName);
+  console.log("Upgrading " +  contractName + "...");
+  const instance = await upgrades.upgradeProxy(contractAddr, contract);
+  console.log(contractName + " upgraded");
 }
 
 main()
