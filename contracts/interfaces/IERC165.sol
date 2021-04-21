@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.0;
 
-interface ERC165
+interface IERC165
 {
 
   function supportsInterface(

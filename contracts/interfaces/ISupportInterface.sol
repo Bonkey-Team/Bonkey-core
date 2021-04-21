@@ -4,7 +4,7 @@ pragma solidity 0.8.0;
 import "./IERC165.sol";
 
 contract SupportsInterface is
-  ERC165
+  IERC165
 {
 
   mapping(bytes4 => bool) internal supportedInterfaces;

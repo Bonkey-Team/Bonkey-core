@@ -7,7 +7,7 @@ import "./interfaces/ISupportInterface.sol";
 import "./libraries/AddressUtils.sol";
 
 contract NFToken is
-  ERC721,
+  IERC721,
   SupportsInterface
 {
   using AddressUtils for address;

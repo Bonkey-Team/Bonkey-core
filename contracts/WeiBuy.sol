@@ -62,10 +62,10 @@ contract WeiBuy is IWeiBuy {
         uint256 u_size = IERC721Tokenized(nft_addr).unit_size();
         uint256 price = IERC721Tokenized(nft_addr).tokenPrice(token_id);
         uint256 tot_tgt_pay_amount = u_size.mul_ratio(price);
-        address old_owner_addr = ERC721(nft_addr).ownerOf(token_id); 
+        address old_owner_addr = IERC721(nft_addr).ownerOf(token_id); 
         address tgt_token = IERC721Tokenized(nft_addr).tgt_token_addr(); 
         IBEP20(tgt_token).transferFrom(msg.sender, old_owner_addr, tot_tgt_pay_amount);
-        ERC721(nft_addr).transferFrom(old_owner_addr, msg.sender, token_id);
+        IERC721(nft_addr).transferFrom(old_owner_addr, msg.sender, token_id);
     }
 
 
