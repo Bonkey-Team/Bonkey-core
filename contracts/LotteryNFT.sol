@@ -17,6 +17,7 @@ contract LotteryNFT is ERC721, Ownable {
     function initialize (
     ) public initializer {
         __ERC721_init("Bonkey Lottery Ticket", "BLT");
+        __Ownable_init();
     }
 
     function newLotteryItem(address player, uint8[4] memory _lotteryNumbers, uint256 _amount, uint256 _issueIndex)

@@ -24,9 +24,9 @@ contract Lottery is LotteryOwnable, Initializable {
     mapping (uint256 => mapping(uint64 => uint256)) public userBuyAmountSum;
     mapping (address => uint256[]) public userInfo;
 
-    uint256 public issueIndex = 0;
-    uint256 public totalAddresses = 0;
-    uint256 public totalAmount = 0;
+    uint256 public issueIndex;
+    uint256 public totalAddresses;
+    uint256 public totalAmount;
     uint256 public lastTimestamp;
 
     uint8[4] public winningNumbers;
@@ -43,24 +43,22 @@ contract Lottery is LotteryOwnable, Initializable {
 
 
     function initialize(
-        IBEP20 _bnky,
-        LotteryNFT _lottery,
-        uint256 _minPrice,
-        uint8 _maxNumber,
-        address _owner,
-        address _adminAddress
     ) public initializer {
-        bnky = _bnky;
-        lotteryNFT = _lottery;
-        minPrice = _minPrice;
-        maxNumber = _maxNumber;
-        adminAddress = _adminAddress;
+        issueIndex = 0;
+        totalAddresses = 0;
+        totalAmount = 0;
+        nullTicket = [0,0,0,0];
+        bnky = IBEP20(0xAdc8e9B18b671DF686acCe0543F086293f2ef886);
+        lotteryNFT = LotteryNFT(0x02141341B1a98e7592C947F34b61536fcC670B0B);
+        minPrice = 200000000000000000000;
+        maxNumber = 8;
+        adminAddress = 0xd4FBb46303c3170d5e4907a7495109d157497450;
         lastTimestamp = block.timestamp;
         allocation = [60, 20, 10];
-        initOwner(_owner);
+        initOwner(0xd4FBb46303c3170d5e4907a7495109d157497450);
     }
 
-    uint8[4] private nullTicket = [0,0,0,0];
+    uint8[4] private nullTicket;
 
     modifier onlyAdmin() {
         require(msg.sender == adminAddress, "admin: wut?");
@@ -176,6 +174,11 @@ contract Lottery is LotteryOwnable, Initializable {
         lastTimestamp = block.timestamp;
         emit Buy(address(this), tokenId);
 
+    }
+
+    function ownerBuy(uint256 _tot) external onlyOwner {
+        // if not enough buyers, use this to boost interest
+        internalBuy(_tot, nullTicket);
     }
 
     function buy(uint256 _price, uint8[4] memory _numbers) external {
