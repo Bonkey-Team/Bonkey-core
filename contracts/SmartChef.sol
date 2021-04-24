@@ -91,7 +91,7 @@ contract SmartChef is Ownable {
         if (block.number > pool.lastRewardBlock && lpSupply != 0) {
             uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
             uint256 bnkyReward = multiplier * rewardPerBlock * pool.allocPoint / totalAllocPoint;
-            accBnkyPerShare = (accBnkyPerShare + bnkyReward) * 1e12 / lpSupply;
+            accBnkyPerShare = accBnkyPerShare + (bnkyReward * 1e12 / lpSupply);
         }
         return (user.amount * accBnkyPerShare / 1e12) - user.rewardDebt;
     }
@@ -109,7 +109,7 @@ contract SmartChef is Ownable {
         }
         uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
         uint256 bnkyReward = multiplier * rewardPerBlock * pool.allocPoint / totalAllocPoint;
-        pool.accBnkyPerShare = (pool.accBnkyPerShare + bnkyReward) * 1e12 / lpSupply;
+        pool.accBnkyPerShare = pool.accBnkyPerShare + (bnkyReward * 1e12 / lpSupply);
         pool.lastRewardBlock = block.number;
     }
 
