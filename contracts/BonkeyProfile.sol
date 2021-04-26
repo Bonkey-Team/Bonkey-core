@@ -42,7 +42,7 @@ contract BonkeyProfile is AccessControl, ERC721Holder {
 
     mapping(uint256 => Team) private teams;
     mapping(address => User) private users;
-    uint256 base = 10000;
+    uint256 base;
     uint256[] public prizes;
     uint256   public numPrizes;
 
@@ -154,6 +154,7 @@ contract BonkeyProfile is AccessControl, ERC721Holder {
         numberBnkyToUpdate = 100000000000000000000;
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
         randNumber = IRandom(0xA280f520AeFBb1390182c00Ca9B718a4B68eAd4D);
+        base = 10000;
     }
     
     function set_prize(uint256[] calldata _prizes) external onlyOwner {

@@ -1,30 +1,23 @@
 # Bonkey Contracts
 
 ## mainnet
-* BNKY token (V1) = 0xc46180bedf5c78e536f511d00e535ca8b63dfda8
-* BNKY token (V2) = 0xAdc8e9B18b671DF686acCe0543F086293f2ef886 
-* Airdrop = 0x2aeFafE516C9459d4869Aea44e9eB1659feAEe61
-* BNB-BNKY = 0x61bAF8000F91C1Fc7BC784b37DEeE49A15Ed005a 
-* BTCB-BNKY = 0x9A2F1423DD3f5a3cb631e4a705d534D77b0FEa91
-* ETH-BNKY = 0xb7A1C819c727567F0672B5035c0C4DB0ba380bb6
-* CAKE-BNKY = 0x70ef23ee5b619eda3acc8941f9140ea17c5e226b 
-* BNKY SmartChef (V1) = 0xd83705f55d57a5f6d7393118e2b77fa452f4ed98 
-* BNKY SmartChef (V2) = 0x7c570465750e4659677e3fE08127435FCbcB9111 
-* BNKY BananaBasket (V1) = 0x4ead21ad1d2b006ee99da08892d89b2c92d0a525
-* BNKY BananaBasket (V2) = 0xe2dB96fA692877f86cede4E4cc21616622167286 
-* BNKY MasterChef (V1) = 0x991Be1cC26c9971919fC510B5d276CF3Ae893c12 
-* BNKY MasterChef (V2) = 0x12d86af861Bb2C8465548d3e2db2FED042770cAD 
-* LotteryNFT (V1) = 0xb3ce0C963b8968d9fa6765C004c2dfB4a12087c3
-* LotteryNFT (V2) = 0x02141341B1a98e7592C947F34b61536fcC670B0B 
-* Lottery (V1) = 0x2da761c12bb95d86a98a15cb5e6765a0942dc99f
-* Lottery (V2) = 0x04137e506a249CdD702eac4cA979b00932533706 
-* BonkeyWukongs = 0xb0e10cb07f953d102e88a1027555c76a281eb188
-* WukongMinttingStation = 0x2f546ac660a6ff5b5086fccf286b85be87b74336
-* WukongFactory = 0x11c90e9ecd0aedd721fdaa6eb3865ce92c7200ab
-* BonkeyProfile = 0x552B15B3866ac8Ac86850957a83CB7Bbe9ebFB88
-* Registry = 0x9f48bcbfc37fa5c76b27c3e0098f6de03f8fa8c5 
-* CompoundPrizePool = 0x0f13DaB98a49Eb455586c28Abc304F42ba3c3602 
-* btBUSD = 0x3571CB785DCCe4D3AbF473c7906F3fc591fa2A4F
+| Name                  | V1                                         | V2                                         |
+|-----------------------|--------------------------------------------|--------------------------------------------|
+| BNKY token            | 0xc46180bedf5c78e536f511d00e535ca8b63dfda8 | 0xAdc8e9B18b671DF686acCe0543F086293f2ef886 |
+| SmartChef             | 0xd83705f55d57a5f6d7393118e2b77fa452f4ed98 | 0x7c570465750e4659677e3fE08127435FCbcB9111 |
+| BananaBasket          | 0x4ead21ad1d2b006ee99da08892d89b2c92d0a525 | 0xe2dB96fA692877f86cede4E4cc21616622167286 |
+| MasterChef            | 0x991Be1cC26c9971919fC510B5d276CF3Ae893c12 | 0x12d86af861Bb2C8465548d3e2db2FED042770cAD |
+| LotteryNFT            | 0xb3ce0C963b8968d9fa6765C004c2dfB4a12087c3 | 0x02141341B1a98e7592C947F34b61536fcC670B0B |
+| Lottery               | 0x2da761c12bb95d86a98a15cb5e6765a0942dc99f | 0x04137e506a249CdD702eac4cA979b00932533706 |
+| BonkeyWukongs         | 0xb0e10cb07f953d102e88a1027555c76a281eb188 | 0x2e556e732c9762bcefF399AdF57018fb93998974 |
+| WukongMinttingStation | 0x2f546ac660a6ff5b5086fccf286b85be87b74336 | 0x300440ED8B143cA4d6730b2aD3f60c2EC0D104E3 |
+| WukongFactory         | 0x11c90e9ecd0aedd721fdaa6eb3865ce92c7200ab | 0xDA714a1aF4a33344F8bC0D42fa783e5d55F6ddfa |
+| BonkeyProfile         | 0x552B15B3866ac8Ac86850957a83CB7Bbe9ebFB88 | 0xaA6a816856daC76d1a796D6fbb50b22db3073dDe |
+| BNB-BNKY              | 0x61bAF8000F91C1Fc7BC784b37DEeE49A15Ed005a | 0xe3dd4fc17cbee436c1c14e32b2c21c0afff33813 |
+| BTCB-BNKY             | 0x9A2F1423DD3f5a3cb631e4a705d534D77b0FEa91 |                                            |
+| ETH-BNKY              | 0xb7A1C819c727567F0672B5035c0C4DB0ba380bb6 |                                            |
+| CAKE-BNKY             | 0x70ef23ee5b619eda3acc8941f9140ea17c5e226b |                                            |
+| Airdrop               | 0x2aeFafE516C9459d4869Aea44e9eB1659feAEe61 |                                            |
 
 ## testnet
 * BNKY testnet (V1) = 0x058a38a4836ddc10deda93d2b49ce0244bd9c856
@@ -45,6 +38,9 @@
 * Registry = 0x082a2343e81293f75adadad14af9fa411108d996
 * CompoundPrizePool = 0xc122435315A635CB2a8bE292157698d67d1cAaAa 
 * btBUSD = 0x02B0975D62584bBa603239cc701Fe60f2efd378a 
+* BonkeyWukongs (V2) = 0xE7f692C4766531AB98c8b069Fd0B5DC3D5aD684d
+* WukongMintingStation (V2) = 0x5Bd71C0D308400492C8443033E75059503cB3BF4
+* WukongFactory (V2) = 0xe78F1191722dba3E89d9696e02Cc0c3BCEA879eF 
 
 ## Others
 * pancakeswap router = 0x05fF2B0DB69458A0750badebc4f9e13aDd608C7F
@@ -57,3 +53,6 @@
 * CAKE SyrupBar = 0x009cf7bc57584b7998236eff51b98a168dcea9b0
 * CAKE profile = 0xDf4dBf6536201370F95e06A0F8a7a70fE40E388a
 * vBUSD = 0x95c78222B3D6e262426483D42CfA53685A67Ab9D
+* Registry = 0x9f48bcbfc37fa5c76b27c3e0098f6de03f8fa8c5 
+* CompoundPrizePool = 0x0f13DaB98a49Eb455586c28Abc304F42ba3c3602 
+* btBUSD = 0x3571CB785DCCe4D3AbF473c7906F3fc591fa2A4F

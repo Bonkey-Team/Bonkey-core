@@ -23,7 +23,7 @@ contract WukongMintingStation is AccessControl {
 
     function initialize (
     ) public initializer {
-        bonkeyWukongs = BonkeyWukongs(0xB0E10CB07f953D102e88a1027555C76A281EB188);
+        bonkeyWukongs = BonkeyWukongs(0x2e556e732c9762bcefF399AdF57018fb93998974);
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
     }
 

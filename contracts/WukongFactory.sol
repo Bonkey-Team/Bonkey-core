@@ -27,7 +27,7 @@ contract WukongFactory is Ownable {
 
     function initialize (
     ) public initializer {
-        wukongMintingStation = WukongMintingStation(0x2f546ac660a6fF5B5086fCCF286b85bE87b74336);
+        wukongMintingStation = WukongMintingStation(0x300440ED8B143cA4d6730b2aD3f60c2EC0D104E3);
         bnkyToken = IBEP20(0xAdc8e9B18b671DF686acCe0543F086293f2ef886);
         tokenPrice = 200000000000000000000;
         ipfsHash = 'wukong';
