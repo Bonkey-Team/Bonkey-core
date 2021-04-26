@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.0;
 
-interface IERC721
+import './IERC165.sol';
+
+interface IERC721 is IERC165
 {
 
   event Transfer(
